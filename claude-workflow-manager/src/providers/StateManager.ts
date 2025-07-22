@@ -15,6 +15,7 @@ export class StateManager {
     };
 
     constructor(workspaceRoot: string) {
+        console.log('StateManager constructor, workspaceRoot:', workspaceRoot);
         this.workspaceRoot = workspaceRoot;
         this.parsers = {
             project: new ProjectParser(),
@@ -24,6 +25,7 @@ export class StateManager {
     }
 
     async getProjectState(): Promise<ProjectState> {
+        console.log('getProjectState called');
         const state: ProjectState = {
             initialized: false,
             epics: [],
@@ -31,6 +33,7 @@ export class StateManager {
             hasChallenge: false,
             hasStatus: false
         };
+        console.log('Initial state created:', state);
 
         // Check if project is initialized
         const readmePath = path.join(this.workspaceRoot, 'README.md');
@@ -55,6 +58,7 @@ export class StateManager {
         state.hasChallenge = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/CHALLENGE.md'));
         state.hasStatus = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/STATUS.md'));
 
+        console.log('Final state:', state);
         return state;
     }
 

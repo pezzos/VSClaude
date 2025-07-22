@@ -11,6 +11,7 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
     private projectState: ProjectState | undefined;
 
     constructor(private workspaceRoot: string) {
+        console.log('WorkflowTreeProvider constructor, workspaceRoot:', workspaceRoot);
         this.stateManager = new StateManager(workspaceRoot);
         this.initializeWatchers();
     }
@@ -37,13 +38,19 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
     }
 
     async getChildren(element?: WorkflowTreeItem): Promise<WorkflowTreeItem[]> {
+        console.log('getChildren called, element:', element?.label);
         if (!this.projectState) {
+            console.log('Loading project state...');
             this.projectState = await this.stateManager.getProjectState();
+            console.log('Project state loaded:', this.projectState);
         }
 
         if (!element) {
             // Root level - show project
-            return this.getRootItems();
+            console.log('Returning root items');
+            const items = this.getRootItems();
+            console.log('Root items:', items.length);
+            return items;
         }
 
         switch (element.itemType) {

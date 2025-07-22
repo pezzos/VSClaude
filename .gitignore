@@ -76,3 +76,4 @@ env/
 *.bak
 *.backup
 .cache/
+claude-workflow-manager/.vscode-test/

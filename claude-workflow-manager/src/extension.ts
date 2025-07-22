@@ -9,22 +9,26 @@ export function activate(context: vscode.ExtensionContext) {
     // Get workspace folder
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (!workspaceFolder) {
-        vscode.window.showWarningMessage('Claude Workflow Manager requires an open workspace folder');
-        return;
+        console.log('No workspace folder found');
+        // Don't return early - still register the tree view so users can see the extension
+        // vscode.window.showWarningMessage('Claude Workflow Manager requires an open workspace folder');
+        // return;
     }
 
-    const workspaceRoot = workspaceFolder.uri.fsPath;
+    const workspaceRoot = workspaceFolder?.uri.fsPath || '';
     
     // Initialize providers
     const treeProvider = new WorkflowTreeProvider(workspaceRoot);
     const commandExecutor = new CommandExecutor();
 
     // Register tree view
+    console.log('Registering tree view claudeWorkflow');
     const treeView = vscode.window.createTreeView('claudeWorkflow', {
         treeDataProvider: treeProvider,
         showCollapseAll: true,
         canSelectMany: false
     });
+    console.log('Tree view registered successfully');
 
     // Register commands
     const commands = [
