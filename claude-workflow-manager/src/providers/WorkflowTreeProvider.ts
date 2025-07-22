@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ProjectState, WorkflowTreeItem, Epic, Story } from '../types';
 import { StateManager } from './StateManager';
+import { StateEventBus, StateEventType } from '../webview/StateEventBus';
 import { CommandRegistry } from '../commands/CommandRegistry';
 
 export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTreeItem> {
@@ -9,12 +10,14 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
 
     private stateManager: StateManager;
     private projectState: ProjectState | undefined;
+    private disposables: vscode.Disposable[] = [];
 
-    constructor(private workspaceRoot: string) {
+    constructor(private workspaceRoot: string, private stateEventBus?: StateEventBus) {
         console.log('🌳 WorkflowTreeProvider CONSTRUCTOR');
         console.log('📁 Workspace Root:', workspaceRoot);
         this.stateManager = new StateManager(workspaceRoot);
         this.initializeWatchers();
+        this.setupStateEventListeners();
         console.log('✅ WorkflowTreeProvider initialized successfully');
     }
 
@@ -23,10 +26,55 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
         if (config.get<boolean>('autoRefresh', true)) {
             const disposables = await this.stateManager.watchForChanges(() => {
                 this.refresh();
+                // Emit state change event to webview
+                this.emitProjectStateChange();
             });
             
             // Store disposables for cleanup
-            vscode.Disposable.from(...disposables);
+            this.disposables.push(...disposables);
+        }
+    }
+
+    private setupStateEventListeners(): void {
+        if (!this.stateEventBus) return;
+
+        // Listen for project state changes from webview or other sources
+        this.disposables.push(
+            this.stateEventBus.on(StateEventType.PROJECT_STATE_CHANGED, () => {
+                this.refresh();
+            })
+        );
+
+        // Listen for epic/story selection events
+        this.disposables.push(
+            this.stateEventBus.on(StateEventType.EPIC_SELECTED, (event) => {
+                if (event.type === StateEventType.EPIC_SELECTED) {
+                    const data = event.data as { epicId: string };
+                    console.log('🎯 Epic selected:', data.epicId);
+                    // Could expand the epic in tree view or highlight it
+                }
+            })
+        );
+
+        this.disposables.push(
+            this.stateEventBus.on(StateEventType.STORY_SELECTED, (event) => {
+                if (event.type === StateEventType.STORY_SELECTED) {
+                    const data = event.data as { storyId: string };
+                    console.log('📝 Story selected:', data.storyId);
+                    // Could expand the story in tree view or highlight it
+                }
+            })
+        );
+    }
+
+    private async emitProjectStateChange(): Promise<void> {
+        if (!this.stateEventBus) return;
+
+        try {
+            const projectState = await this.stateManager.getProjectState();
+            this.stateEventBus.emit(StateEventType.PROJECT_STATE_CHANGED, projectState);
+        } catch (error) {
+            console.error('Error emitting project state change:', error);
         }
     }
 
@@ -489,5 +537,13 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
      */
     async waitForInitializationWithValidation(timeoutMs?: number): Promise<{ success: boolean; validation?: { valid: boolean; missingFiles: string[]; invalidFiles: string[] } }> {
         return this.stateManager.waitForInitializationWithValidation(timeoutMs);
+    }
+
+    /**
+     * Dispose of resources
+     */
+    dispose(): void {
+        this.disposables.forEach(d => d.dispose());
+        this.disposables = [];
     }
 }

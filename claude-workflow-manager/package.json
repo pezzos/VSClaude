@@ -2,7 +2,7 @@
   "name": "claude-workflow-manager",
   "displayName": "Claude Workflow Manager",
   "description": "Visual interface for managing Claude Code workflows with interactive tree view",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -33,12 +33,19 @@
       "claude-workflow": [
         {
           "id": "claudeWorkflow",
-          "name": "Workflow Manager"
+          "name": "Workflow Manager",
+          "when": "false"
+        },
+        {
+          "id": "claudeWorkflowWebview",
+          "name": "Workflow Dashboard",
+          "type": "webview",
+          "when": "true"
         },
         {
           "id": "claudeOutput",
           "name": "Command Output",
-          "when": "true"
+          "when": "false"
         }
       ]
     },
@@ -161,14 +168,22 @@
         "claudeWorkflowManager.githubConfigRepo": {
           "type": "string",
           "description": "GitHub repository for Claude configuration (user/repo format)"
+        },
+        "claudeWorkflowManager.preferredInterface": {
+          "type": "string",
+          "enum": ["tree", "webview", "both"],
+          "default": "webview",
+          "description": "Preferred interface type for the workflow manager (tree view is deprecated)"
         }
       }
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run compile && npm run build-webview",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
+    "build-webview": "cd webview-ui && npm ci && npm run build",
+    "dev-webview": "cd webview-ui && npm run dev",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
     "test": "node ./out/test/runTest.js"

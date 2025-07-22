@@ -282,8 +282,28 @@ export class CommandExecutor {
         });
     }
 
-    async executeClaudeCommand(claudeCommand: ClaudeCommand): Promise<boolean> {
-        return this.executeCommand(claudeCommand.command);
+    async executeClaudeCommand(claudeCommand: ClaudeCommand): Promise<boolean>;
+    async executeClaudeCommand(command: string, args?: string[]): Promise<{ success: boolean; output?: string; error?: string }>;
+    async executeClaudeCommand(
+        claudeCommandOrString: ClaudeCommand | string, 
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        _args?: string[]
+    ): Promise<boolean | { success: boolean; output?: string; error?: string }> {
+        if (typeof claudeCommandOrString === 'string') {
+            // New signature for webview
+            try {
+                const success = await this.executeCommand(claudeCommandOrString);
+                return { success, output: success ? 'Command executed successfully' : undefined };
+            } catch (error) {
+                return { 
+                    success: false, 
+                    error: error instanceof Error ? error.message : String(error) 
+                };
+            }
+        } else {
+            // Original signature for tree view
+            return this.executeCommand(claudeCommandOrString.command);
+        }
     }
 
     /**

@@ -13,6 +13,7 @@ export class StateManager {
         epic: EpicParser;
         story: StoryParser;
     };
+    private initInProgress: boolean = false;
 
     constructor(workspaceRoot: string) {
         console.log('StateManager constructor, workspaceRoot:', workspaceRoot);
@@ -60,6 +61,24 @@ export class StateManager {
 
         console.log('Final state:', state);
         return state;
+    }
+
+    async canImportFeedback(): Promise<boolean> {
+        return !this.initInProgress && await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/EPICS.md'));
+    }
+
+    async canPlanEpics(): Promise<boolean> {
+        const feedbackExists = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/FEEDBACK.md'));
+        const epicsExists = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/EPICS.md'));
+        return !this.initInProgress && feedbackExists && epicsExists;
+    }
+
+    getInitInProgress(): boolean {
+        return this.initInProgress;
+    }
+
+    setInitInProgress(inProgress: boolean): void {
+        this.initInProgress = inProgress;
     }
 
     private async fileExists(filePath: string): Promise<boolean> {

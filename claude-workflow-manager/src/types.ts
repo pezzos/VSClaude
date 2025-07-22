@@ -1,5 +1,13 @@
 import * as vscode from 'vscode';
 
+export enum ProjectStatus {
+    NOT_INITIALIZED = 'not_initialized',
+    INITIALIZING = 'initializing',
+    ACTIVE = 'active',
+    PAUSED = 'paused',
+    COMPLETED = 'completed'
+}
+
 export interface ProjectState {
     initialized: boolean;
     name?: string;
@@ -69,5 +77,5 @@ export interface OutputLogItem extends vscode.TreeItem {
     stderr: string;
     exitCode?: number;
     duration?: number;
-    itemType: 'command' | 'output' | 'error';
+    itemType: 'command' | 'output' | 'error' | 'output_block' | 'error_block';
 }

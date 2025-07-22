@@ -1,10 +1,17 @@
 # Claude Workflow Manager
 
-A Visual Studio Code extension that provides an interactive tree view interface for managing Claude Code workflows. This extension transforms the command-line Claude workflow into a visual, clickable interface that shows project state in real-time.
+A Visual Studio Code extension that provides both tree view and modern webview interfaces for managing Claude Code workflows. This extension transforms the command-line Claude workflow into visual, interactive interfaces that show project state in real-time.
 
 ## Features
 
-### 🌳 Interactive Tree View
+### 🖥️ Modern Webview Interface (NEW!)
+- **Traycer-Style UI**: Modern, task-oriented interface similar to popular task management tools
+- **Project Overview Dashboard**: Comprehensive project statistics and progress visualization
+- **Task Management Panel**: Interactive task cards with drag-and-drop functionality
+- **Command Execution Center**: Real-time command execution with progress tracking
+- **Implementation Plan Viewer**: Visual plan management with step-by-step tracking
+
+### 🌳 Classic Tree View Interface
 - **Project Overview**: Visual representation of your Claude workflow state
 - **Real-time Updates**: Automatically refreshes when project files change
 - **Contextual Actions**: Click to execute Claude commands directly from the interface
@@ -36,7 +43,14 @@ A Visual Studio Code extension that provides an interactive tree view interface 
 1. Clone this repository
 2. Open the folder in VS Code
 3. Run `npm install` to install dependencies
-4. Press F5 to run the extension in a new Extension Development Host window
+4. Build the webview UI: `npm run build-webview`
+5. Press F5 to run the extension in a new Extension Development Host window
+
+### Development
+For webview UI development:
+1. Run `npm run dev-webview` in a separate terminal for hot reloading
+2. The webview will automatically rebuild when you make changes to React components
+3. Use the browser developer tools within VS Code to debug the webview
 
 ### Package Installation
 1. Package the extension: `vsce package`
@@ -46,8 +60,24 @@ A Visual Studio Code extension that provides an interactive tree view interface 
 
 ### Initial Setup
 1. Open a folder in VS Code where you want to create your Claude workflow project
-2. The Claude Workflow view will appear in the Explorer panel
-3. Click "🔧 Initialize Project" to set up the workflow structure
+2. The Claude Workflow view will appear in the Activity Bar on the left
+3. Choose between the **Workflow Manager** (webview) or **Workflow Tree** (classic tree view)
+4. Click "Initialize Project" to set up the workflow structure
+
+### Interface Options
+
+#### 🖥️ Modern Webview Interface
+The new webview interface provides a Traycer-style experience with multiple panels:
+
+- **Project Overview**: Dashboard showing project statistics, progress, and current work
+- **Task Management**: Interactive cards for epics, stories, and tickets with status tracking
+- **Command Center**: Execute commands with real-time progress and history
+- **Plan Viewer**: Visual implementation plans with step-by-step execution tracking
+
+Navigate between views using the tabs at the top: Overview | Tasks | Commands | Plans
+
+#### 🌳 Classic Tree View Interface  
+The traditional tree interface provides a hierarchical view of your project structure with clickable actions for command execution.
 
 ### Managing Your Project
 The tree view shows different items based on your project state:
@@ -114,19 +144,21 @@ Configure the extension through VS Code settings:
 
 ```json
 {
-  "claudeWorkflow.autoRefresh": true,
-  "claudeWorkflow.commandTimeout": 60,
-  "claudeWorkflow.showCompletedItems": true,
-  "claudeWorkflow.githubConfigRepo": "user/claude-config"
+  "claudeWorkflowManager.autoRefresh": true,
+  "claudeWorkflowManager.commandTimeout": 60,
+  "claudeWorkflowManager.showCompletedItems": true,
+  "claudeWorkflowManager.githubConfigRepo": "user/claude-config",
+  "claudeWorkflowManager.preferredInterface": "both"
 }
 ```
 
 ### Settings Details
 
-- **autoRefresh**: Automatically refresh tree when files change (default: true)
+- **autoRefresh**: Automatically refresh when files change (default: true)
 - **commandTimeout**: Timeout for Claude commands in seconds (default: 60)
-- **showCompletedItems**: Show completed items in tree (default: true)
+- **showCompletedItems**: Show completed items in interfaces (default: true)
 - **githubConfigRepo**: GitHub repo for Claude configuration (optional)
+- **preferredInterface**: Choose interface type: "tree", "webview", or "both" (default: "both")
 
 ## File Structure
 

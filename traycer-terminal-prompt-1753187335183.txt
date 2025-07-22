@@ -1,0 +1,406 @@
+I have created the following plan after thorough exploration and analysis of the codebase. Follow the below plan verbatim. Trust the files and references. Do not re-verify what's written in the plan. Explore only when absolutely necessary. First implement all the proposed file changes and then I'll review all the changes together at the end. Make sure you fix all the linting, compilation or validation issues after successful implementation of the plan.
+
+### Observations
+
+I've analyzed the VSCode extension codebase and understand the current architecture. The extension uses a traditional TreeDataProvider with hierarchical tree view showing projects, epics, stories, and tickets. The user wants to transform this into a modern Traycer-style interface with task panels, status indicators, detailed implementation plans, and interactive capabilities. The current system has solid foundations with StateManager, CommandExecutor, and OutputLogProvider that can be leveraged for the new UI.
+
+### Approach
+
+The transformation will involve creating a new WebviewViewProvider alongside the existing tree view, implementing a modern task-oriented interface similar to Traycer Extension. We'll maintain the existing command execution infrastructure while adding a new webview-based UI layer. The approach includes creating a webview panel, implementing bidirectional communication, designing a modern React-based interface, and gradually migrating functionality from the tree view to the new interface.
+
+### Reasoning
+
+I explored the extension's codebase by examining the main components: WorkflowTreeProvider (current tree implementation), extension.ts (activation and registration), types.ts (data structures), StateManager (state management), CommandExecutor (command execution), OutputLogProvider (output handling), and CommandRegistry (available commands). This gave me a complete understanding of the current architecture and how to transform it into a Traycer-style interface.
+
+## Mermaid Diagram
+
+sequenceDiagram
+    participant User
+    participant WebviewUI as Webview UI (React)
+    participant WebviewProvider as WorkflowWebviewProvider
+    participant StateEventBus as StateEventBus
+    participant StateManager as StateManager
+    participant CommandExecutor as CommandExecutor
+    participant TreeProvider as WorkflowTreeProvider (Legacy)
+
+    User->>WebviewUI: Click \"Initialize Project\"
+    WebviewUI->>WebviewProvider: postMessage(EXECUTE_COMMAND)
+    WebviewProvider->>CommandExecutor: executeClaudeCommand()
+    CommandExecutor->>CommandExecutor: Execute claude command
+    CommandExecutor->>StateEventBus: Emit command status update
+    StateEventBus->>WebviewProvider: Notify command progress
+    WebviewProvider->>WebviewUI: postMessage(COMMAND_STATUS_UPDATE)
+    WebviewUI->>WebviewUI: Update UI with progress
+
+    CommandExecutor->>StateManager: Command completion triggers file changes
+    StateManager->>StateEventBus: Emit state change event
+    StateEventBus->>WebviewProvider: Notify project state updated
+    StateEventBus->>TreeProvider: Notify project state updated (legacy)
+    WebviewProvider->>StateManager: getProjectState()
+    StateManager->>WebviewProvider: Return updated project state
+    WebviewProvider->>WebviewUI: postMessage(PROJECT_STATE_UPDATE)
+    WebviewUI->>WebviewUI: Refresh task panels and project overview
+
+    TreeProvider->>TreeProvider: Refresh tree view (legacy support)
+
+## Proposed File Changes
+
+### src/webview/WorkflowWebviewProvider.ts(NEW)
+
+References: 
+
+- src/providers/WorkflowTreeProvider.ts(MODIFY)
+- src/providers/StateManager.ts
+- src/commands/CommandExecutor.ts
+
+Create a new WebviewViewProvider class that implements the Traycer-style interface. This provider will:
+
+- Implement \`vscode.WebviewViewProvider\` interface
+- Register as a webview view in the same container as the current tree view
+- Handle webview creation, HTML content generation, and resource management
+- Implement bidirectional communication with the webview using \`postMessage\` API
+- Subscribe to state changes from \`StateManager\` to update the UI in real-time
+- Handle command execution requests from the webview by delegating to existing \`CommandExecutor\`
+- Manage webview lifecycle (show/hide, dispose, state persistence)
+- Provide methods for updating project state, command status, and output logs
+- Include CSP (Content Security Policy) configuration for security
+- Handle webview panel focus and visibility events
+
+### src/webview/protocol.ts(NEW)
+
+References: 
+
+- src/types.ts
+
+Define TypeScript interfaces for webview communication protocol. This file will contain:
+
+- Message type enums for different communication types (PROJECT_STATE_UPDATE, EXECUTE_COMMAND, COMMAND_STATUS_UPDATE, etc.)
+- Request/response interfaces for each message type
+- Serializable versions of existing types (\`ProjectState\`, \`Epic\`, \`Story\`, \`Ticket\`) without VSCode-specific classes
+- Command execution request/response interfaces
+- State update notification interfaces
+- Error handling message types
+- Type guards and validation functions for message parsing
+- Documentation for the communication protocol
+
+This ensures type safety for all webview ↔ extension communication.
+
+### src/webview/StateEventBus.ts(NEW)
+
+References: 
+
+- src/providers/StateManager.ts
+- src/providers/WorkflowTreeProvider.ts(MODIFY)
+
+Create a centralized event bus for state management that both the tree view and webview can subscribe to. This class will:
+
+- Implement an event emitter pattern using VSCode's \`EventEmitter\` or a custom implementation
+- Provide methods to subscribe/unsubscribe to state changes
+- Emit events when project state changes (project initialized, epic selected, story started, etc.)
+- Handle debouncing of rapid state changes to prevent UI thrashing
+- Provide typed event interfaces for different state change types
+- Include methods for broadcasting command execution status updates
+- Manage subscriber lifecycle and cleanup
+- Integrate with existing \`StateManager.watchForChanges()\` functionality
+
+This decouples state management from UI components and allows multiple UI layers to stay synchronized.
+
+### webview-ui(NEW)
+
+Create the webview UI directory structure for the React-based frontend. This directory will contain the modern Traycer-style interface implementation.
+
+### webview-ui/package.json(NEW)
+
+Create package.json for the webview UI with React, TypeScript, and Vite setup. Include dependencies for:
+
+- React and React DOM for the UI framework
+- TypeScript for type safety
+- Vite for fast development and building
+- CSS modules or styled-components for styling
+- VSCode webview UI toolkit for consistent styling
+- Icons library (Lucide React or similar) for modern icons
+- State management library (Zustand or React Context)
+- Build scripts for development and production
+- ESLint and Prettier for code quality
+
+Configure build output to generate files that can be served by the VSCode webview.
+
+### webview-ui/vite.config.ts(NEW)
+
+Configure Vite build system for VSCode webview compatibility. The configuration will:
+
+- Set up build output directory to \`../out/webview-ui/\`
+- Configure base path for webview resource loading
+- Set up CSS processing and module support
+- Configure TypeScript compilation
+- Set up development server with proper CORS settings
+- Configure build optimization for production
+- Handle asset bundling and resource paths for VSCode webview context
+- Set up source maps for debugging
+- Configure external dependencies handling
+
+### webview-ui/src/App.tsx(NEW)
+
+Create the main React application component implementing the Traycer-style interface. The App component will:
+
+- Implement a modern task-oriented layout with panels and cards
+- Display project overview with status indicators and progress visualization
+- Show current epic and story information in dedicated panels
+- Implement task list with clear status indicators (Planning, In Progress, Completed)
+- Create action buttons for common commands (Initialize, Plan Epics, Start Story, etc.)
+- Display command execution status with real-time updates
+- Implement plan iteration interface for reviewing and editing generated plans
+- Show task chaining and context preservation features
+- Include agent selection interface for different AI coding agents
+- Implement responsive design that works well in VSCode sidebar
+- Use modern UI patterns like cards, badges, progress bars, and interactive buttons
+- Handle loading states and error conditions gracefully
+
+### webview-ui/src/components/ProjectOverview.tsx(NEW)
+
+References: 
+
+- src/types.ts
+
+Create a project overview component that displays high-level project information. This component will:
+
+- Show project name and initialization status
+- Display project statistics (total epics, completed stories, active tasks)
+- Show current epic and story information in a prominent card
+- Include quick action buttons for common project-level commands
+- Display project health indicators and progress visualization
+- Show recent activity and command history
+- Implement collapsible sections for detailed information
+- Use modern card-based layout with proper spacing and typography
+- Include status badges and progress indicators
+- Handle empty states when no project is initialized
+
+### webview-ui/src/components/TaskPanel.tsx(NEW)
+
+References: 
+
+- src/types.ts
+
+Create a task panel component similar to Traycer's task management interface. This component will:
+
+- Display tasks (epics, stories, tickets) in a modern card-based layout
+- Show task status with clear visual indicators (colors, icons, progress bars)
+- Implement task filtering and sorting capabilities
+- Display task details including priority, description, and acceptance criteria
+- Show task dependencies and relationships
+- Include action buttons for task operations (start, complete, plan, etc.)
+- Implement task selection and context switching
+- Display task progress and completion status
+- Show estimated vs actual time for tasks
+- Include task notes and comments functionality
+- Handle task state transitions with smooth animations
+- Implement drag-and-drop for task reordering (future enhancement)
+
+### webview-ui/src/components/CommandPanel.tsx(NEW)
+
+References: 
+
+- src/commands/CommandRegistry.ts
+- src/types.ts
+
+Create a command execution panel that shows available commands and their execution status. This component will:
+
+- Display available commands organized by category (Project, Epic, Story, Ticket)
+- Show command descriptions and expected outcomes
+- Implement command execution with real-time status updates
+- Display command history and results
+- Show command output and logs in an expandable format
+- Include command retry and cancellation functionality
+- Display command execution time and success/failure status
+- Implement command queuing for sequential execution
+- Show command dependencies and prerequisites
+- Include command favorites and recent commands
+- Display command help and documentation
+- Handle long-running commands with progress indicators
+
+### webview-ui/src/components/PlanViewer.tsx(NEW)
+
+Create a plan viewer component for displaying and editing implementation plans. This component will:
+
+- Display generated plans in a structured, navigable format
+- Show plan steps with clear descriptions and file changes
+- Implement plan editing capabilities with inline editing
+- Display plan iteration history and changes
+- Show plan validation and feasibility checks
+- Include plan approval and rejection workflow
+- Display affected files and expected changes
+- Show plan dependencies and prerequisites
+- Implement plan comparison between iterations
+- Include plan export and sharing functionality
+- Display plan execution progress and status
+- Handle plan conflicts and resolution suggestions
+- Show plan metrics (complexity, estimated time, risk level)
+
+### webview-ui/src/hooks/useVSCodeAPI.ts(NEW)
+
+References: 
+
+- src/webview/protocol.ts(NEW)
+
+Create a React hook for VSCode API communication. This hook will:
+
+- Provide a clean interface for sending messages to the extension
+- Handle message responses and error handling
+- Implement request/response correlation using unique IDs
+- Provide methods for common operations (execute command, get state, etc.)
+- Handle connection state and reconnection logic
+- Implement message queuing for offline scenarios
+- Provide TypeScript types for all API methods
+- Handle message serialization and deserialization
+- Implement timeout handling for long-running requests
+- Provide hooks for subscribing to state updates
+- Handle VSCode theme changes and preferences
+- Include debugging and logging capabilities
+
+### webview-ui/src/hooks/useProjectState.ts(NEW)
+
+References: 
+
+- src/types.ts
+- src/webview/protocol.ts(NEW)
+
+Create a React hook for managing project state in the webview. This hook will:
+
+- Manage local project state with React state management
+- Subscribe to state updates from the extension
+- Provide methods for updating local state
+- Handle state synchronization between webview and extension
+- Implement optimistic updates for better UX
+- Provide derived state calculations (progress, statistics, etc.)
+- Handle state persistence across webview reloads
+- Implement state validation and error handling
+- Provide state history and undo functionality
+- Handle concurrent state updates and conflicts
+- Include state debugging and inspection tools
+- Optimize re-renders with proper memoization
+
+### webview-ui/src/styles/main.css(NEW)
+
+Create the main CSS file with modern styling for the Traycer-style interface. The styles will include:
+
+- VSCode theme integration with CSS custom properties
+- Modern card-based layouts with proper spacing and shadows
+- Responsive design that works in VSCode sidebar
+- Status indicator styles (colors, badges, progress bars)
+- Button and interaction styles consistent with VSCode UI
+- Typography scale and hierarchy
+- Animation and transition definitions
+- Loading state and skeleton screen styles
+- Error and success state styling
+- Dark and light theme support
+- Accessibility improvements (focus indicators, contrast)
+- Mobile-friendly responsive breakpoints
+- Print styles for documentation export
+
+### src/extension.ts(MODIFY)
+
+References: 
+
+- src/webview/WorkflowWebviewProvider.ts(NEW)
+- src/webview/StateEventBus.ts(NEW)
+- src/providers/WorkflowTreeProvider.ts(MODIFY)
+
+Update the extension activation to register the new webview provider alongside the existing tree view. The modifications will:
+
+- Import the new \`WorkflowWebviewProvider\` class
+- Import and initialize the \`StateEventBus\` for coordinating between UI layers
+- Register the webview provider with VSCode using \`vscode.window.registerWebviewViewProvider\`
+- Connect the webview provider to the existing \`StateManager\`, \`CommandExecutor\`, and \`OutputLogProvider\`
+- Update the existing \`WorkflowTreeProvider\` to use the new \`StateEventBus\` instead of direct state management
+- Add configuration option to choose between tree view and webview interface
+- Ensure both UI layers can coexist and stay synchronized
+- Add proper disposal handling for the new webview provider
+- Update command registration to work with both UI layers
+- Add webview-specific commands if needed (toggle view, reset webview, etc.)
+
+### package.json(MODIFY)
+
+References: 
+
+- webview-ui/package.json(NEW)
+
+Update package.json to include the new webview configuration and build scripts. The changes will:
+
+- Add a new view in the \`contributes.views\` section for the webview interface (e.g., \`claudeWorkflowWebview\`)
+- Add configuration options to choose between tree view and webview interface
+- Add new commands for webview-specific operations (toggle view, refresh webview, etc.)
+- Update build scripts to include webview UI compilation
+- Add \`vscode:prepublish\` script to build both extension and webview UI
+- Update the extension's \`main\` field if needed
+- Add webview UI build dependencies to \`devDependencies\`
+- Update \`.vscodeignore\` patterns to include/exclude appropriate webview files
+- Add webview resource configuration for proper asset loading
+- Update extension description to mention the new interface option
+
+### src/providers/WorkflowTreeProvider.ts(MODIFY)
+
+References: 
+
+- src/webview/StateEventBus.ts(NEW)
+- src/providers/StateManager.ts
+
+Update the existing tree provider to use the new \`StateEventBus\` for better coordination with the webview. The modifications will:
+
+- Replace direct \`StateManager\` usage with \`StateEventBus\` subscription
+- Update the refresh mechanism to work with the centralized event system
+- Ensure the tree view and webview stay synchronized when state changes
+- Add methods to handle state updates from the event bus
+- Maintain backward compatibility with existing functionality
+- Update event handling to use the new centralized approach
+- Add proper cleanup for event bus subscriptions
+- Optimize refresh logic to prevent unnecessary updates
+- Add configuration option to hide/show tree view when webview is active
+- Update logging to distinguish between tree view and webview operations
+
+### tsconfig.json(MODIFY)
+
+References: 
+
+- webview-ui/vite.config.ts(NEW)
+
+Update TypeScript configuration to include the new webview files and ensure proper compilation. The changes will:
+
+- Add the new \`src/webview/\` directory to the include paths
+- Ensure proper module resolution for the webview components
+- Add any necessary compiler options for React JSX compilation if needed
+- Update output directory configuration to handle webview files
+- Add path mapping for webview imports if needed
+- Ensure proper type checking for the new webview code
+- Update exclude patterns to handle webview UI build artifacts
+- Add any necessary lib references for webview development
+
+### .vscodeignore(MODIFY)
+
+References: 
+
+- webview-ui/package.json(NEW)
+
+Update .vscodeignore to properly handle webview UI files for extension packaging. The changes will:
+
+- Exclude webview UI source files (\`webview-ui/src/**\`, \`webview-ui/node_modules/**\`)
+- Include compiled webview UI assets (\`out/webview-ui/**\`)
+- Exclude webview development files (\`webview-ui/package.json\`, \`webview-ui/vite.config.ts\`, etc.)
+- Ensure proper packaging of webview resources
+- Add patterns for any new build artifacts
+- Exclude unnecessary development files while including runtime assets
+- Update patterns to handle both development and production scenarios
+
+### README.md(MODIFY)
+
+Update the README to document the new Traycer-style interface and its features. The updates will:
+
+- Add a new section describing the modern webview interface
+- Include screenshots or descriptions of the new UI components
+- Document the differences between tree view and webview interfaces
+- Add configuration instructions for choosing between interfaces
+- Update feature list to include new webview capabilities
+- Add development instructions for the webview UI
+- Update build and installation instructions
+- Document the new task-oriented workflow
+- Add troubleshooting section for webview-specific issues
+- Update contribution guidelines to include webview development

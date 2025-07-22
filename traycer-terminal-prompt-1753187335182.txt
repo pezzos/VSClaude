@@ -1,0 +1,85 @@
+I have created the following plan after thorough exploration and analysis of the codebase. Follow the below plan verbatim. Trust the files and references. Do not re-verify what's written in the plan. Explore only when absolutely necessary. First implement all the proposed file changes and then I'll review all the changes together at the end. Make sure you fix all the linting, compilation or validation issues after successful implementation of the plan.
+
+### Observations
+
+Based on my analysis of the current VSCode extension architecture, I can see that the extension has both a traditional tree view provider and a React-based webview interface. The current tree view shows a basic hierarchical structure, while the user wants a sophisticated dashboard interface similar to modern development tools. The extension already has robust command execution with streaming capabilities, state management, and event-driven communication between the extension host and webview. The key challenge is transforming the UI from a tree-based navigation to a button-driven dashboard with real-time streaming logs.
+
+### Approach
+
+I'll transform the extension by deprecating the tree view interface and enhancing the existing webview to become the primary interface. The approach involves: (1) Creating a single dashboard layout with prominent action buttons, (2) Implementing real-time log streaming from command execution to the webview, (3) Building expandable project cards that show streaming output, and (4) Maintaining the existing command execution and state management infrastructure while enhancing the communication protocol for streaming updates. This approach leverages the existing React infrastructure and event bus system while providing the modern interface the user desires.
+
+### Reasoning
+
+I analyzed the current extension structure by examining the tree provider implementation, webview components, command execution system, and event bus communication. I identified that the extension already has streaming command output capabilities but only sends logs to VSCode's output panel, not to the webview. The React webview has a tab-based navigation that needs to be simplified into a single dashboard. I mapped out the current message protocol and identified the gaps needed for real-time log streaming to the webview interface.
+
+## Mermaid Diagram
+
+sequenceDiagram
+    participant User
+    participant ActionHeader
+    participant VSCodeAPI
+    participant CommandExecutor
+    participant StateEventBus
+    participant WebviewProvider
+    participant ProjectCard
+
+    User->>ActionHeader: Click "Initialize Project"
+    ActionHeader->>VSCodeAPI: executeCommand('initProject')
+    VSCodeAPI->>CommandExecutor: Execute initialization command
+    CommandExecutor->>StateEventBus: Emit COMMAND_STARTED event
+    StateEventBus->>WebviewProvider: Forward command started
+    WebviewProvider->>ProjectCard: Send command status update
+    
+    loop During Command Execution
+        CommandExecutor->>StateEventBus: Emit LOG_ENTRY_ADDED events
+        StateEventBus->>WebviewProvider: Forward log entries
+        WebviewProvider->>ProjectCard: Stream log entries via LOG_ENTRY_STREAM
+        ProjectCard->>ProjectCard: Append logs to display
+    end
+    
+    CommandExecutor->>StateEventBus: Emit COMMAND_COMPLETED event
+    StateEventBus->>WebviewProvider: Forward completion
+    WebviewProvider->>ActionHeader: Send project state update
+    ActionHeader->>ActionHeader: Show "Import FEEDBACK.md" & "Plan EPICS" buttons
+
+## Proposed File Changes
+
+### src/webview/protocol.ts(MODIFY)
+
+Extend the message protocol to support real-time log streaming by adding new message types. Add `LOG_ENTRY_STREAM` to the `MessageType` enum for extension-to-webview communication. Create a new `LogEntryStreamMessage` interface that includes `logEntry`, `commandId`, and `timestamp` fields. Add an `InitProgressUpdateMessage` interface with `progress`, `status`, and `logs` fields for initialization progress updates. Extend the `SerializableLogEntry` interface to include streaming metadata like `commandId` and `streamIndex`. Add corresponding type guard functions `isLogEntryStreamMessage` and `isInitProgressUpdateMessage` to validate incoming messages. Update the `WebviewMessage` union type to include the new message interfaces.
+
+### src/webview/WorkflowWebviewProvider.ts(MODIFY)
+
+Enhance the webview provider to support real-time log streaming to the webview. In the `setupEventListeners` method, add a subscription to `LOG_ENTRY_ADDED` events from the `StateEventBus`. Create a new `sendLogEntryUpdate` method that forwards individual log entries to the webview using the new `LOG_ENTRY_STREAM` message type. Modify the method to include the command ID and timestamp for proper log association. Add throttling to prevent overwhelming the webview with too many log updates. Update the `sendMessage` method to handle the new message types. Ensure proper error handling for streaming scenarios and add logging for debugging streaming issues.
+
+### src/providers/StateManager.ts(MODIFY)
+
+Add initialization progress tracking to the state manager. Add an `initInProgress` boolean property to track when project initialization is running. Create getter methods `canImportFeedback()` and `canPlanEpics()` that return boolean values based on the current project state and available files. Modify the `getProjectState` method to include these new properties in the returned state object. Add a `setInitInProgress` method that can be called by the command executor when initialization starts and ends. Ensure the state change triggers appropriate events through the existing event bus integration.
+
+### src/commands/CommandExecutor.ts(MODIFY)
+
+Ensure that command execution properly emits log events that can be streamed to the webview. Verify that the existing `appendOutput` calls to `OutputLogProvider` also trigger `LOG_ENTRY_ADDED` events through the `StateEventBus`. If not already implemented, add event emission for each log entry that gets appended during command execution. Add command ID tracking so that log entries can be associated with specific commands. Ensure that the initialization command specifically triggers the `StateManager.setInitInProgress` method at the start and end of execution. Add proper error handling to ensure log streaming continues even if individual log entries fail to process.
+
+### webview-ui/src/hooks/useProjectState.ts(MODIFY)
+
+Enhance the project state hook to handle streaming logs and initialization progress. Add new state variables: `initInProgress` (boolean), `initLogs` (array of log entries), and `streamingCommandId` (string) to track the active streaming command. In the message handling `useEffect`, add handlers for the new `LOG_ENTRY_STREAM` and `INIT_PROGRESS_UPDATE` message types. When log entries arrive, append them to the `initLogs` array and manage the buffer size to prevent memory issues (limit to ~1000 entries). Update the `initInProgress` state based on command lifecycle events. Add a `clearInitLogs` function to reset the log buffer. Update the return object to include the new state variables and utility functions. In the `useProjectData` hook, add computed properties `canImportFeedback` and `canPlanEpics` based on the project state.
+
+### webview-ui/src/components/ActionHeader.tsx(NEW)
+
+Create a new component that serves as the primary action interface, replacing the tree view functionality. The component should display a full-width prominent button for "Initialize Project" when the project is not initialized. After initialization, show secondary action buttons for "Import FEEDBACK.md" and "Plan EPICS" based on the project state. Implement loading states with spinners during command execution and disable buttons appropriately. Use the `useVSCodeAPI` hook to execute commands when buttons are clicked. Style the component to match the sophisticated look from the reference image, using CSS variables from `main.css`. Include proper TypeScript interfaces for props: `isInitialized`, `initInProgress`, `canImportFeedback`, `canPlanEpics`, and callback functions for each action. Ensure accessibility with proper ARIA labels and keyboard navigation support.
+
+### webview-ui/src/components/ProjectCard.tsx(NEW)
+
+Create a new component for displaying streaming command output in an expandable card format. The component should have a collapsible header showing the project name and current status. Implement a virtualized log list using a library like `react-window` to handle large amounts of streaming log data efficiently. Add auto-scroll functionality to keep the latest logs visible during streaming. Include copy-to-clipboard functionality for individual log entries. Implement log filtering and basic search capabilities. Use monospace font for log display with appropriate color coding for different log levels (info, warning, error). Style the component with subtle borders, shadows, and smooth expand/collapse animations. Add proper TypeScript interfaces for props including `isExpanded`, `onToggleExpanded`, `logs`, `isStreaming`, `projectName`, and `initInProgress`. Implement performance optimizations with `React.memo` and efficient re-rendering strategies.
+
+### webview-ui/src/App.tsx(MODIFY)
+
+Transform the App component from a tab-based navigation to a single dashboard layout. Remove the `ViewMode` type and `activeView` state as tabs are being eliminated. Remove the `viewConfig` object and all tab-related logic. Replace the navigation bar with the new `ActionHeader` component. Restructure the main content area to display a single dashboard layout with the `ActionHeader` at the top, followed by the `ProjectCard` for streaming logs, and the existing project overview content below. Remove or integrate the quick actions sidebar into the main dashboard. Update the component imports to include the new `ActionHeader` and `ProjectCard` components. Maintain the existing project state integration through the enhanced `useProjectState` hook. Keep the status bar and loading states but adapt them for the new single-dashboard layout. Ensure the layout is responsive and maintains the sophisticated styling approach.
+
+### webview-ui/src/styles/main.css(MODIFY)
+
+Add new CSS classes and styles for the `ActionHeader` and `ProjectCard` components. Create `.action-header` class with full-width button styling, proper spacing, and sophisticated appearance matching the reference image. Add `.action-button-primary` for the main initialize button with prominent styling, hover effects, and loading states. Create `.action-button-secondary` for the follow-up action buttons with appropriate sizing and spacing. Add `.project-card` class with expandable/collapsible styling, subtle borders, shadows, and smooth animations. Create `.log-container` and `.log-entry` classes for the streaming log display with monospace font, proper line height, and color coding for different log levels. Add `.log-level-info`, `.log-level-warning`, `.log-level-error` classes for appropriate color coding. Ensure all new styles integrate well with the existing CSS variable system and VSCode theming. Add responsive design considerations for different screen sizes and maintain accessibility standards with proper focus states and contrast ratios.
+
+### package.json(MODIFY)
+
+Update the view configuration to hide the tree view and promote the webview as the primary interface. In the `views` section under `claude-workflow`, add `"when": "false"` to the `claudeWorkflow` view to hide the tree view from the UI. Keep the `claudeWorkflowWebview` view as the primary interface without any `when` condition. Consider hiding the `claudeOutput` view as well since logs will now be displayed in the webview. In the `menus` section, remove or modify tree-specific context menu contributions that are no longer relevant. Keep command palette commands intact to maintain functionality. Update the `preferredInterface` configuration default from "both" to "webview" to reflect the new UI approach. Update the description of this setting to indicate that the tree view is deprecated. Ensure backward compatibility by keeping the tree view code available but hidden, allowing users to potentially re-enable it if needed.

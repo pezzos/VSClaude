@@ -1,5 +1,8 @@
 import * as vscode from 'vscode';
 import { WorkflowTreeProvider } from './providers/WorkflowTreeProvider';
+import { WorkflowWebviewProvider } from './webview/WorkflowWebviewProvider';
+import { StateEventBus } from './webview/StateEventBus';
+import { StateManager } from './providers/StateManager';
 import { OutputLogProvider } from './providers/OutputLogProvider';
 import { CommandExecutor } from './commands/CommandExecutor';
 import { ClaudeCommand } from './types';
@@ -24,10 +27,21 @@ export function activate(context: vscode.ExtensionContext) {
 
     const workspaceRoot = workspaceFolder?.uri.fsPath || '';
     
-    // Initialize providers
-    const treeProvider = new WorkflowTreeProvider(workspaceRoot);
-    const outputLogProvider = new OutputLogProvider();
+    // Initialize core services
+    const stateEventBus = new StateEventBus();
+    const stateManager = new StateManager(workspaceRoot);
+    const outputLogProvider = new OutputLogProvider(stateEventBus);
     const commandExecutor = new CommandExecutor();
+    
+    // Initialize providers
+    const treeProvider = new WorkflowTreeProvider(workspaceRoot, stateEventBus);
+    const webviewProvider = new WorkflowWebviewProvider(
+        context,
+        stateEventBus,
+        stateManager,
+        commandExecutor,
+        outputLogProvider
+    );
     
     // Connect CommandExecutor to OutputLogProvider
     commandExecutor.setOutputLogProvider(outputLogProvider);
@@ -40,6 +54,17 @@ export function activate(context: vscode.ExtensionContext) {
         canSelectMany: false
     });
     console.log('✅ TREE VIEW REGISTERED SUCCESSFULLY!');
+
+    // Register webview provider
+    console.log('🖥️ REGISTERING WEBVIEW PROVIDER: claudeWorkflowWebview');
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider('claudeWorkflowWebview', webviewProvider, {
+            webviewOptions: {
+                retainContextWhenHidden: true
+            }
+        })
+    );
+    console.log('✅ WEBVIEW PROVIDER REGISTERED SUCCESSFULLY!');
 
     // Register output log view
     console.log('🔧 REGISTERING OUTPUT LOG VIEW: claudeOutput');
@@ -252,6 +277,8 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(treeView);
     context.subscriptions.push(outputView);
     context.subscriptions.push(commandExecutor);
+    context.subscriptions.push(stateEventBus);
+    context.subscriptions.push(webviewProvider);
     console.log('✅ ALL COMMANDS REGISTERED!');
 
     // Set up status bar item
