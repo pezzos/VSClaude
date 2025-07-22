@@ -10,8 +10,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished",
-    "onView:claudeWorkflow"
+    "onStartupFinished"
   ],
   "publisher": "local-dev",
   "repository": {
