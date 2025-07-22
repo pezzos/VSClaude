@@ -20,11 +20,20 @@
   },
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "claude-workflow",
+          "title": "Claude Workflow",
+          "icon": "resources/claude-workflow-icon.svg"
+        }
+      ]
+    },
     "views": {
-      "explorer": [
+      "claude-workflow": [
         {
           "id": "claudeWorkflow",
-          "name": "Claude Workflow"
+          "name": "Workflow Manager"
         }
       ]
     },

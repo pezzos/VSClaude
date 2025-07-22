@@ -108,8 +108,8 @@ suite('Extension Activation Diagnostic Test Suite', () => {
         assert.ok(true, 'Tree view provider test completed');
     });
 
-    test('Extension should appear in explorer panel', async () => {
-        console.log('👀 Testing explorer panel visibility...');
+    test('Extension should appear in activity bar panel', async () => {
+        console.log('👀 Testing activity bar panel visibility...');
         
         const ext = vscode.extensions.getExtension('local-dev.claude-workflow-manager');
         if (!ext?.isActive) {
@@ -118,17 +118,18 @@ suite('Extension Activation Diagnostic Test Suite', () => {
         
         // Check manifest contributions
         const manifest = ext?.packageJSON;
-        assert.ok(manifest?.contributes?.views?.explorer, 'Should contribute views to explorer');
+        assert.ok(manifest?.contributes?.views?.['claude-workflow'], 'Should contribute views to claude-workflow container');
+        assert.ok(manifest?.contributes?.viewsContainers?.activitybar, 'Should contribute viewsContainers to activity bar');
         
-        const claudeView = manifest.contributes.views.explorer.find(
+        const claudeView = manifest.contributes.views['claude-workflow'].find(
             (view: { id: string }) => view.id === 'claudeWorkflow'
         );
         
-        assert.ok(claudeView, 'Should have claudeWorkflow view in explorer');
+        assert.ok(claudeView, 'Should have claudeWorkflow view in claude-workflow container');
         assert.strictEqual(claudeView.id, 'claudeWorkflow', 'View ID should be claudeWorkflow');
-        assert.strictEqual(claudeView.name, 'Claude Workflow', 'View name should be Claude Workflow');
+        assert.strictEqual(claudeView.name, 'Workflow Manager', 'View name should be Workflow Manager');
         
-        console.log('📋 Explorer view config:', claudeView);
-        console.log('✅ Explorer panel configuration is correct');
+        console.log('📋 Activity bar view config:', claudeView);
+        console.log('✅ Activity bar panel configuration is correct');
     });
 });

@@ -76,22 +76,45 @@ export function activate(context: vscode.ExtensionContext) {
             );
 
             if (result === 'Yes') {
-                await commandExecutor.executeCommand('/1-Init');
+                console.log('🚀 STARTING PROJECT INITIALIZATION');
+                await commandExecutor.executeCommand('/1-project:1-start:1-Init-Project');
                 vscode.window.showInformationMessage('Project initialization started');
-                setTimeout(() => treeProvider.refresh(), 3000);
+                console.log('✅ Project initialization command completed, scheduling refresh...');
+                
+                // Use longer delay and multiple refreshes to ensure state is updated
+                setTimeout(() => {
+                    console.log('⏰ FIRST REFRESH (5s after init)');
+                    treeProvider.refresh();
+                }, 5000);
+                
+                // Backup refresh in case files take longer to be created
+                setTimeout(() => {
+                    console.log('⏰ BACKUP REFRESH (8s after init)');
+                    treeProvider.refresh();
+                }, 8000);
             }
         }),
 
         vscode.commands.registerCommand('claudeWorkflow.selectEpic', async () => {
-            await commandExecutor.executeCommand('/4-Epic select');
+            console.log('🎯 STARTING EPIC SELECTION');
+            await commandExecutor.executeCommand('/2-epic:1-start:1-Select-Stories');
             vscode.window.showInformationMessage('Epic selection started');
-            setTimeout(() => treeProvider.refresh(), 3000);
+            console.log('✅ Epic selection completed, scheduling refresh...');
+            setTimeout(() => {
+                console.log('⏰ REFRESH after epic selection');
+                treeProvider.refresh();
+            }, 4000);
         }),
 
         vscode.commands.registerCommand('claudeWorkflow.startStory', async () => {
-            await commandExecutor.executeCommand('/6-Story start');
+            console.log('📝 STARTING STORY');
+            await commandExecutor.executeCommand('/3-story:1-manage:1-Start-Story');
             vscode.window.showInformationMessage('Story started');
-            setTimeout(() => treeProvider.refresh(), 3000);
+            console.log('✅ Story start completed, scheduling refresh...');
+            setTimeout(() => {
+                console.log('⏰ REFRESH after story start');
+                treeProvider.refresh();
+            }, 3000);
         }),
 
         vscode.commands.registerCommand('claudeWorkflow.completeItem', async (item: { itemType?: string }) => {
@@ -99,10 +122,10 @@ export function activate(context: vscode.ExtensionContext) {
             let message = '';
 
             if (item?.itemType === 'story') {
-                command = '/6-Story complete';
+                command = '/3-story:1-manage:2-Complete-Story';
                 message = 'Story completion started';
             } else if (item?.itemType === 'epic') {
-                command = '/4-Epic complete';
+                command = '/2-epic:2-manage:1-Complete-Epic';
                 message = 'Epic completion started';
             } else {
                 vscode.window.showWarningMessage('Cannot complete this item type');
@@ -115,15 +138,25 @@ export function activate(context: vscode.ExtensionContext) {
         }),
 
         vscode.commands.registerCommand('claudeWorkflow.planEpics', async () => {
-            await commandExecutor.executeCommand('/3-Epic plan');
+            console.log('📋 STARTING EPIC PLANNING');
+            await commandExecutor.executeCommand('/1-project:3-epics:1-Plan-Epics');
             vscode.window.showInformationMessage('Epic planning started');
-            setTimeout(() => treeProvider.refresh(), 5000);
+            console.log('✅ Epic planning completed, scheduling refresh...');
+            setTimeout(() => {
+                console.log('⏰ REFRESH after epic planning');
+                treeProvider.refresh();
+            }, 6000);
         }),
 
         vscode.commands.registerCommand('claudeWorkflow.planStories', async () => {
-            await commandExecutor.executeCommand('/5-Story plan');
+            console.log('📋 STARTING STORY PLANNING');
+            await commandExecutor.executeCommand('/2-epic:1-start:2-Plan-stories');
             vscode.window.showInformationMessage('Story planning started');
-            setTimeout(() => treeProvider.refresh(), 5000);
+            console.log('✅ Story planning completed, scheduling refresh...');
+            setTimeout(() => {
+                console.log('⏰ REFRESH after story planning');
+                treeProvider.refresh();
+            }, 5000);
         }),
 
         vscode.commands.registerCommand('claudeWorkflow.openFile', async (item: { itemType?: string; label?: string }) => {

@@ -77,14 +77,23 @@ suite('Integration Test Suite', () => {
         assert.strictEqual(manifest.publisher, 'local-dev', 'Publisher should match');
         assert.ok(manifest.contributes, 'Should have contributions');
         assert.ok(manifest.contributes.views, 'Should contribute views');
-        assert.ok(manifest.contributes.views.explorer, 'Should contribute to explorer');
+        assert.ok(manifest.contributes.viewsContainers, 'Should contribute viewsContainers');
+        assert.ok(manifest.contributes.viewsContainers.activitybar, 'Should contribute to activity bar');
+        assert.ok(manifest.contributes.views['claude-workflow'], 'Should contribute to claude-workflow container');
+        
+        // Check our specific view container
+        const claudeContainer = manifest.contributes.viewsContainers.activitybar.find(
+            (container: { id: string; title: string }) => container.id === 'claude-workflow'
+        );
+        assert.ok(claudeContainer, 'Should have claude-workflow container');
+        assert.strictEqual(claudeContainer.title, 'Claude Workflow', 'Container title should match');
         
         // Check our specific view
-        const claudeView = manifest.contributes.views.explorer.find(
+        const claudeView = manifest.contributes.views['claude-workflow'].find(
             (view: { id: string; name: string }) => view.id === 'claudeWorkflow'
         );
         assert.ok(claudeView, 'Should have claudeWorkflow view');
-        assert.strictEqual(claudeView.name, 'Claude Workflow', 'View name should match');
+        assert.strictEqual(claudeView.name, 'Workflow Manager', 'View name should match');
         
         console.log('✓ Manifest validation passed');
     });
@@ -108,24 +117,24 @@ suite('Integration Test Suite', () => {
         assert.ok(true, 'Status bar test completed');
     });
 
-    test('Tree view should be accessible via View menu', async () => {
+    test('Tree view should be accessible via Activity Bar', async () => {
         console.log('Testing tree view accessibility...');
         
-        // In VS Code, tree views in explorer are accessible via the Explorer view
+        // In VS Code, our tree view is now in custom Activity Bar container
         // We can test this by checking if our view configuration is correct
         
         const ext = vscode.extensions.getExtension('local-dev.claude-workflow-manager');
         const manifest = ext?.packageJSON;
         
-        assert.ok(manifest?.contributes?.views?.explorer, 'Should contribute to explorer');
+        assert.ok(manifest?.contributes?.views?.['claude-workflow'], 'Should contribute to claude-workflow container');
         
-        const claudeView = manifest.contributes.views.explorer.find(
+        const claudeView = manifest.contributes.views['claude-workflow'].find(
             (view: { id: string; name: string }) => view.id === 'claudeWorkflow'
         );
         
         assert.ok(claudeView, 'Claude Workflow view should be configured');
         assert.strictEqual(claudeView.id, 'claudeWorkflow', 'View ID should be correct');
-        assert.strictEqual(claudeView.name, 'Claude Workflow', 'View name should be correct');
+        assert.strictEqual(claudeView.name, 'Workflow Manager', 'View name should be correct');
         
         console.log('✓ Tree view configuration is correct');
         console.log('View configuration:', claudeView);
