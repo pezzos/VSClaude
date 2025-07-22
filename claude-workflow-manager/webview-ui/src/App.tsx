@@ -51,10 +51,7 @@ export const App: React.FC = () => {
     return (
         <div className="app dashboard">
             {/* Simple debug header */}
-            <div style={{padding: '20px', background: '#2d3748', color: 'white', border: '1px solid #4a5568', borderRadius: '8px', marginBottom: '16px'}}>
-                <h2>🚀 Claude Workflow Manager Dashboard</h2>
-                <p>Debug Info: {projectState ? 'Project loaded' : 'No project'}, Loading: {isLoading ? 'Yes' : 'No'}</p>
-            </div>
+            <h2>🚀 Claude Workflow Manager Dashboard</h2>
 
             {/* Action Header */}
             <ActionHeader

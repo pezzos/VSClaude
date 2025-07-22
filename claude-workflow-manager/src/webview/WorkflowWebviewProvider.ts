@@ -515,7 +515,7 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
                 cssFile = cssFiles[0];
             }
         } catch (error) {
-            console.warn('Could not read assets directory, using default filenames');
+            console.warn('Could not read assets directory, using default filenames:', error);
         }
 
         const scriptUri = webview.asWebviewUri(
