@@ -201,7 +201,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                         )}
                         {isStreaming && (
                             <span className="streaming-indicator">
-                                🔴 LIVE
+                                ▶️ WORKING
                             </span>
                         )}
                     </div>

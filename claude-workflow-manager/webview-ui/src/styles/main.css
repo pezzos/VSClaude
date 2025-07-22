@@ -2287,6 +2287,158 @@ select:focus-visible {
   color: var(--vscode-descriptionForeground);
 }
 
+/* Action Blocks */
+.action-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg);
+}
+
+.action-block {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+}
+
+.block-title {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Action Sequence */
+.action-sequence {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.action-sequence .action-button-secondary {
+  flex: 0 0 auto;
+  min-width: 140px;
+  font-size: 12px;
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.sequence-arrow {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  color: var(--vscode-descriptionForeground);
+  margin: 0 var(--spacing-xs);
+  user-select: none;
+}
+
+.action-button-secondary.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-descriptionForeground);
+  border-color: var(--vscode-input-border);
+}
+
+.action-button-secondary.disabled:hover {
+  background-color: var(--vscode-input-background);
+  border-color: var(--vscode-input-border);
+  transform: none;
+}
+
+/* Feedback Help Message */
+.feedback-help {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--vscode-editorHoverWidget-background);
+  border: 1px solid var(--vscode-editorHoverWidget-border);
+  border-radius: var(--border-radius-sm);
+  color: var(--vscode-editorHoverWidget-foreground);
+  font-size: 12px;
+  line-height: 1.4;
+  max-width: 300px;
+}
+
+/* Epic Actions */
+.epic-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.epic-actions .action-button-secondary {
+  min-width: 200px;
+}
+
+/* Epic List */
+.epic-list {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-color);
+}
+
+.epic-list-title {
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.epic-titles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.epic-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  margin: var(--spacing-xs) 0;
+  background-color: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: var(--border-radius-sm);
+  font-size: 12px;
+}
+
+.epic-number {
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground);
+  min-width: 24px;
+}
+
+.epic-name {
+  color: var(--text-color);
+  flex: 1;
+}
+
+/* Responsive Design for Action Blocks */
+@media (max-width: 768px) {
+  .action-sequence {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .sequence-arrow {
+    transform: rotate(90deg);
+    margin: var(--spacing-xs) 0;
+  }
+  
+  .action-sequence .action-button-secondary {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .epic-actions .action-button-secondary {
+    min-width: auto;
+    flex: 1;
+  }
+}
+
 /* Print styles */
 @media print {
   .app-nav,

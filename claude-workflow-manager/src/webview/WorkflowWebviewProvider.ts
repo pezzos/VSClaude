@@ -200,6 +200,9 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
             const result = await this.commandExecutor.executeClaudeCommand(command, args);
 
             if (result.success) {
+                // Mark command as executed for tracking purposes
+                await this.stateManager.markCommandExecuted(command);
+                
                 this.stateEventBus.emit(StateEventType.COMMAND_COMPLETED, {
                     commandId,
                     output: result.output || 'Command completed successfully',
@@ -455,7 +458,13 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
             // Additional state from ProjectState for button logic
             hasFeedback: projectState.hasFeedback || false,
             hasChallenge: projectState.hasChallenge || false,
-            hasStatus: projectState.hasStatus || false
+            hasStatus: projectState.hasStatus || false,
+            // New command execution tracking fields
+            hasValidFeedback: projectState.hasValidFeedback || false,
+            hasExecutedImportFeedback: projectState.hasExecutedImportFeedback || false,
+            hasExecutedPlanEpics: projectState.hasExecutedPlanEpics || false,
+            // Epic titles list for display
+            epicTitles: projectState.epicTitles || []
         };
     }
 

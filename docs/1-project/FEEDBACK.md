@@ -1,31 +1,16 @@
-# Extension VS Code : Claude Workflow Manager
+# VSClaude Project Challenge & Strategic Feedback
 
-## Vue d'ensemble
+## Executive Summary
 
-Créer une extension VS Code qui visualise et pilote le workflow de développement Claude Code sous forme d'arborescence interactive. L'extension affiche l'état du projet en temps réel et permet d'exécuter les commandes Claude Code directement depuis l'interface graphique.
+Based on comprehensive analysis of the VSClaude project (VS Code extension for Claude Code workflow management), this document presents data-driven strategic challenges and recommendations to improve project architecture, performance, and maintainability.
 
-## Architecture technique
+## Key Architectural Findings
 
-### Structure de l'extension
-```
-claude-workflow-manager/
-├── src/
-│   ├── extension.ts          # Point d'entrée
-│   ├── providers/
-│   │   ├── WorkflowTreeProvider.ts    # Arborescence principale
-│   │   └── StateManager.ts            # Gestion état projet
-│   ├── commands/
-│   │   ├── CommandExecutor.ts         # Exécution claude -p
-│   │   └── CommandRegistry.ts         # Mapping commandes
-│   ├── parsers/
-│   │   ├── ProjectParser.ts           # Parse EPICS.md, etc.
-│   │   ├── EpicParser.ts              # Parse PRD.md
-│   │   └── StoryParser.ts             # Parse STORIES.md
-│   └── views/
-│       └── icons/                     # Icônes pour l'arbre
-├── package.json
-└── README.md
-```
+### Current State Analysis
+- **Project Type**: VS Code extension with dual interface system (tree view + webview)
+- **Core Dependencies**: VS Code API (^1.75.0), TypeScript, external Claude CLI
+- **Architecture Pattern**: File-system based state management with real-time parsing
+- **Current Version**: 0.1.14 (actively developed)
 
 ## Interface utilisateur
 

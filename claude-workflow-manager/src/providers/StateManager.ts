@@ -28,6 +28,9 @@ interface PersistedState {
         autoSave: boolean;
         logRetentionDays: number;
     };
+    // Command execution tracking
+    hasExecutedImportFeedback?: boolean;
+    hasExecutedPlanEpics?: boolean;
     lastUpdated: number;
 }
 
@@ -59,7 +62,11 @@ export class StateManager {
             epics: [],
             hasFeedback: false,
             hasChallenge: false,
-            hasStatus: false
+            hasStatus: false,
+            hasValidFeedback: false,
+            hasExecutedImportFeedback: false,
+            hasExecutedPlanEpics: false,
+            epicTitles: []
         };
         console.log('Initial state created:', state);
 
@@ -133,6 +140,17 @@ export class StateManager {
         state.hasFeedback = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/FEEDBACK.md'));
         state.hasChallenge = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/CHALLENGE.md'));
         state.hasStatus = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/STATUS.md'));
+        
+        // Check if FEEDBACK.md has valid content (not empty or template)
+        state.hasValidFeedback = await this.hasValidFeedbackContent();
+        
+        // Check if commands have been executed (from persisted state or file existence)
+        const commandState = await this.loadPersistedState();
+        state.hasExecutedImportFeedback = commandState?.hasExecutedImportFeedback || state.hasFeedback;
+        state.hasExecutedPlanEpics = commandState?.hasExecutedPlanEpics || (state.epics.length > 0);
+
+        // Load epic titles from EPICS.md if it exists
+        state.epicTitles = await this.loadEpicTitles();
 
         console.log('Final state:', state);
         return state;
@@ -583,6 +601,9 @@ export class StateManager {
                     autoSave: true,
                     logRetentionDays: 30
                 },
+                // Preserve command execution state
+                hasExecutedImportFeedback: projectState.hasExecutedImportFeedback,
+                hasExecutedPlanEpics: projectState.hasExecutedPlanEpics,
                 lastUpdated: Date.now()
             };
 
@@ -648,6 +669,105 @@ export class StateManager {
             }
         } catch (error) {
             console.error('❌ Error clearing persisted state:', error);
+        }
+    }
+
+    /**
+     * Check if FEEDBACK.md has valid content (not empty or template)
+     */
+    private async hasValidFeedbackContent(): Promise<boolean> {
+        const feedbackPath = path.join(this.workspaceRoot, 'docs/1-project/FEEDBACK.md');
+        
+        if (!await this.fileExists(feedbackPath)) {
+            return false;
+        }
+
+        try {
+            const content = await fs.promises.readFile(feedbackPath, 'utf8');
+            const trimmedContent = content.trim();
+            
+            // Check if file is empty
+            if (trimmedContent.length === 0) {
+                return false;
+            }
+            
+            // Check if content is just template/placeholder text
+            const templateIndicators = [
+                '# FEEDBACK',
+                'Add your feedback here',
+                'placeholder',
+                'TODO',
+                'REPLACE_ME',
+                '<!-- template -->',
+                'This is a template'
+            ];
+            
+            // If content is too short (less than 100 characters) and contains template indicators
+            if (trimmedContent.length < 100) {
+                const lowerContent = trimmedContent.toLowerCase();
+                const hasTemplateIndicators = templateIndicators.some(indicator => 
+                    lowerContent.includes(indicator.toLowerCase())
+                );
+                
+                if (hasTemplateIndicators) {
+                    return false;
+                }
+            }
+            
+            // Content is valid if it's substantial and doesn't appear to be a template
+            return trimmedContent.length > 50;
+        } catch (error) {
+            console.error('Error reading FEEDBACK.md:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Load epic titles from EPICS.md
+     */
+    private async loadEpicTitles(): Promise<string[]> {
+        const epicsPath = path.join(this.workspaceRoot, 'docs/1-project/EPICS.md');
+        
+        if (!await this.fileExists(epicsPath)) {
+            return [];
+        }
+
+        try {
+            const content = await fs.promises.readFile(epicsPath, 'utf8');
+            const parseResult = this.parsers.project.parseEpicTitles(content);
+            return parseResult.success ? parseResult.data! : [];
+        } catch (error) {
+            console.error('Error loading epic titles:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Mark a command as executed in persisted state
+     */
+    async markCommandExecuted(command: string): Promise<void> {
+        try {
+            const persistedState = await this.loadPersistedState();
+            
+            if (persistedState) {
+                if (command.includes('/1-project:2-update:1-Import-feedback')) {
+                    persistedState.hasExecutedImportFeedback = true;
+                } else if (command.includes('/1-project:3-epics:1-Plan-Epics')) {
+                    persistedState.hasExecutedPlanEpics = true;
+                }
+                
+                persistedState.lastUpdated = Date.now();
+                
+                await fs.promises.writeFile(
+                    this.stateFilePath, 
+                    JSON.stringify(persistedState, null, 2), 
+                    'utf8'
+                );
+                
+                console.log(`🔄 Marked command as executed: ${command}`);
+            }
+        } catch (error) {
+            console.error('❌ Error marking command as executed:', error);
         }
     }
 }

@@ -59,6 +59,35 @@ export class ProjectParser {
         }
     }
 
+    parseEpicTitles(content: string): FileParseResult<string[]> {
+        try {
+            const titles: string[] = [];
+            const lines = content.split('\n');
+
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                
+                // Look for epic headers: ## Epic #1: Title [status]
+                if (trimmedLine.startsWith('## Epic')) {
+                    const match = trimmedLine.match(/## Epic #(\d+):\s*(.+?)(?:\s*\[(.*?)\])?$/);
+                    if (match) {
+                        titles.push(match[2].trim());
+                    }
+                }
+            }
+
+            return {
+                success: true,
+                data: titles
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error parsing epic titles'
+            };
+        }
+    }
+
     private parseStatus(statusStr?: string): 'planned' | 'active' | 'completed' {
         if (!statusStr) return 'planned';
         

@@ -17,6 +17,12 @@ export interface ProjectState {
     hasFeedback: boolean;
     hasChallenge: boolean;
     hasStatus: boolean;
+    // New fields for command execution tracking
+    hasValidFeedback: boolean;
+    hasExecutedImportFeedback: boolean;
+    hasExecutedPlanEpics: boolean;
+    // Epic titles list for display
+    epicTitles: string[];
 }
 
 export interface Epic {

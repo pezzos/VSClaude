@@ -6,6 +6,13 @@ interface ActionHeaderProps {
     initInProgress: boolean;
     canImportFeedback: boolean;
     canPlanEpics: boolean;
+    hasFeedback: boolean;
+    hasChallenge: boolean;
+    hasStatus: boolean;
+    hasValidFeedback: boolean;
+    hasExecutedImportFeedback: boolean;
+    hasExecutedPlanEpics: boolean;
+    epicTitles: string[];
     onInitializeProject?: () => void;
     onImportFeedback?: () => void;
     onPlanEpics?: () => void;
@@ -14,8 +21,11 @@ interface ActionHeaderProps {
 export const ActionHeader: React.FC<ActionHeaderProps> = ({
     isInitialized,
     initInProgress,
-    canImportFeedback,
     canPlanEpics,
+    hasValidFeedback,
+    hasExecutedImportFeedback,
+    hasExecutedPlanEpics,
+    epicTitles,
     onInitializeProject,
     onImportFeedback,
     onPlanEpics
@@ -30,6 +40,22 @@ export const ActionHeader: React.FC<ActionHeaderProps> = ({
     const handleImportFeedback = () => {
         api.executeCommand('/1-project:2-update:1-Import-feedback');
         onImportFeedback?.();
+    };
+
+    const handleChallenge = () => {
+        api.executeCommand('/1-project:2-update:2-Challenge');
+    };
+
+    const handleEnrich = () => {
+        api.executeCommand('/1-project:2-update:3-Enrich');
+    };
+
+    const handleStatus = () => {
+        api.executeCommand('/1-project:2-update:4-Status');
+    };
+
+    const handleImplementationStatus = () => {
+        api.executeCommand('/1-project:2-update:5-Implementation-Status');
     };
 
     const handlePlanEpics = () => {
@@ -69,28 +95,113 @@ export const ActionHeader: React.FC<ActionHeaderProps> = ({
 
     return (
         <div className="action-header">
-            <div className="secondary-actions">
-                <button
-                    className="action-button-secondary"
-                    onClick={handleImportFeedback}
-                    disabled={!canImportFeedback || initInProgress}
-                    aria-label="Import feedback document"
-                    title={canImportFeedback ? "Import FEEDBACK.md to update project requirements" : "Complete project initialization first"}
-                >
-                    <span className="icon">📋</span>
-                    Import FEEDBACK.md
-                </button>
+            {/* Project update cycle block */}
+            <div className="action-block">
+                <h3 className="block-title">Project update cycle</h3>
+                <div className="action-sequence">
+                    <button
+                        className={`action-button-secondary ${!hasValidFeedback ? 'disabled' : ''}`}
+                        onClick={handleImportFeedback}
+                        disabled={!hasValidFeedback || initInProgress}
+                        aria-label="Import feedback document"
+                        title={hasValidFeedback ? "Import FEEDBACK.md to update project requirements" : "Add content to FEEDBACK.md file first"}
+                    >
+                        <span className="icon">📋</span>
+                        Import Feedback
+                    </button>
+                    
+                    {!hasValidFeedback && (
+                        <div className="feedback-help">
+                            💡 Ajoutez des retours dans le fichier FEEDBACK.md pour ajouter des besoins/features/etc... au projet
+                        </div>
+                    )}
+                    
+                    <div className="sequence-arrow">→</div>
+                    
+                    <button
+                        className={`action-button-secondary ${!hasExecutedImportFeedback ? 'disabled' : ''}`}
+                        onClick={handleChallenge}
+                        disabled={!hasExecutedImportFeedback || initInProgress}
+                        aria-label="Challenge current assumptions"
+                        title={hasExecutedImportFeedback ? "Challenge current assumptions and plans" : "Execute Import Feedback first"}
+                    >
+                        <span className="icon">🤔</span>
+                        Challenge
+                    </button>
+                    
+                    <div className="sequence-arrow">→</div>
+                    
+                    <button
+                        className={`action-button-secondary ${!hasExecutedImportFeedback ? 'disabled' : ''}`}
+                        onClick={handleEnrich}
+                        disabled={!hasExecutedImportFeedback || initInProgress}
+                        aria-label="Add context and insights"
+                        title={hasExecutedImportFeedback ? "Add context and insights to project" : "Execute Import Feedback first"}
+                    >
+                        <span className="icon">✨</span>
+                        Enrich
+                    </button>
+                    
+                    <div className="sequence-arrow">→</div>
+                    
+                    <button
+                        className={`action-button-secondary ${!hasExecutedPlanEpics ? 'disabled' : ''}`}
+                        onClick={handleStatus}
+                        disabled={!hasExecutedPlanEpics || initInProgress}
+                        aria-label="Check project status"
+                        title={hasExecutedPlanEpics ? "Check and update project status" : "Execute Plan Epics first"}
+                    >
+                        <span className="icon">📊</span>
+                        Status
+                    </button>
+                    
+                    <div className="sequence-arrow">→</div>
+                    
+                    <button
+                        className={`action-button-secondary ${!hasExecutedPlanEpics ? 'disabled' : ''}`}
+                        onClick={handleImplementationStatus}
+                        disabled={!hasExecutedPlanEpics || initInProgress}
+                        aria-label="Review implementation progress"
+                        title={hasExecutedPlanEpics ? "Review implementation progress" : "Execute Plan Epics first"}
+                    >
+                        <span className="icon">🔧</span>
+                        Implementation Status
+                    </button>
+                </div>
+            </div>
+
+            {/* Epic management block */}
+            <div className="action-block">
+                <h3 className="block-title">Epic management</h3>
+                <div className="epic-actions">
+                    <button
+                        className="action-button-secondary"
+                        onClick={handlePlanEpics}
+                        disabled={!canPlanEpics || initInProgress}
+                        aria-label={epicTitles.length > 0 ? "Update project epics" : "Plan project epics"}
+                        title={canPlanEpics ? 
+                            (epicTitles.length > 0 ? "Update existing epic plans" : "Generate detailed epic plans based on project requirements") 
+                            : "Complete project initialization first"}
+                    >
+                        <span className="icon">📋</span>
+                        {epicTitles.length > 0 ? 'Update Epics' : 'Plan Epics'}
+                    </button>
+                </div>
                 
-                <button
-                    className="action-button-secondary"
-                    onClick={handlePlanEpics}
-                    disabled={!canPlanEpics || initInProgress}
-                    aria-label="Plan project epics"
-                    title={canPlanEpics ? "Generate detailed epic plans based on project requirements" : "Import FEEDBACK.md first"}
-                >
-                    <span className="icon">📊</span>
-                    Plan EPICS
-                </button>
+                {/* Display epic titles list when epics exist */}
+                {epicTitles.length > 0 && (
+                    <div className="epic-list">
+                        <h4 className="epic-list-title">Current Epics:</h4>
+                        <ul className="epic-titles">
+                            {epicTitles.map((title, index) => (
+                                <li key={index} className="epic-title">
+                                    <span className="epic-number">#{index + 1}</span>
+                                    <span className="epic-name">{title}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </div>
         </div>
     );

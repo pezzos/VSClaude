@@ -51,7 +51,7 @@ export const App: React.FC = () => {
     return (
         <div className="app dashboard">
             {/* Simple debug header */}
-            <h2>🚀 Claude Workflow Manager Dashboard</h2>
+            <h2>🚀 Claude Workflow Manager</h2>
 
             {/* Action Header */}
             <ActionHeader
@@ -59,6 +59,13 @@ export const App: React.FC = () => {
                 initInProgress={initInProgress || false}
                 canImportFeedback={canImportFeedback || false}
                 canPlanEpics={canPlanEpics || false}
+                hasFeedback={projectState?.hasFeedback || false}
+                hasChallenge={projectState?.hasChallenge || false}
+                hasStatus={projectState?.hasStatus || false}
+                hasValidFeedback={projectState?.hasValidFeedback || false}
+                hasExecutedImportFeedback={projectState?.hasExecutedImportFeedback || false}
+                hasExecutedPlanEpics={projectState?.hasExecutedPlanEpics || false}
+                epicTitles={projectState?.epicTitles || []}
             />
 
             {/* Project Card for Streaming Logs */}
