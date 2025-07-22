@@ -9,6 +9,10 @@
   "categories": [
     "Other"
   ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:claudeWorkflow"
+  ],
   "publisher": "local-dev",
   "repository": {
     "type": "git",

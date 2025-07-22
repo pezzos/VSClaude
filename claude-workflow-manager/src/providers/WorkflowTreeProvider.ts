@@ -11,9 +11,11 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
     private projectState: ProjectState | undefined;
 
     constructor(private workspaceRoot: string) {
-        console.log('WorkflowTreeProvider constructor, workspaceRoot:', workspaceRoot);
+        console.log('🌳 WorkflowTreeProvider CONSTRUCTOR');
+        console.log('📁 Workspace Root:', workspaceRoot);
         this.stateManager = new StateManager(workspaceRoot);
         this.initializeWatchers();
+        console.log('✅ WorkflowTreeProvider initialized successfully');
     }
 
     private async initializeWatchers(): Promise<void> {
@@ -38,18 +40,23 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
     }
 
     async getChildren(element?: WorkflowTreeItem): Promise<WorkflowTreeItem[]> {
-        console.log('getChildren called, element:', element?.label);
+        console.log('🔍 GET CHILDREN CALLED');
+        console.log('📋 Element:', element?.label || 'ROOT');
+        
         if (!this.projectState) {
-            console.log('Loading project state...');
+            console.log('🔄 Loading project state...');
             this.projectState = await this.stateManager.getProjectState();
-            console.log('Project state loaded:', this.projectState);
+            console.log('✅ Project state loaded:', JSON.stringify(this.projectState, null, 2));
         }
 
         if (!element) {
             // Root level - show project
-            console.log('Returning root items');
+            console.log('🌟 Returning ROOT items');
             const items = this.getRootItems();
-            console.log('Root items:', items.length);
+            console.log(`📊 Root items count: ${items.length}`);
+            items.forEach((item, index) => {
+                console.log(`   ${index + 1}. ${item.label} (${item.itemType})`);
+            });
             return items;
         }
 

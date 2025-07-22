@@ -4,7 +4,13 @@ import { CommandExecutor } from './commands/CommandExecutor';
 import { ClaudeCommand } from './types';
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('Claude Workflow Manager extension is now active');
+    console.log('🚀 CLAUDE WORKFLOW MANAGER - ACTIVATION STARTED!');
+    console.log('📊 Extension Context:', {
+        subscriptions: context.subscriptions.length,
+        extensionPath: context.extensionPath,
+        workspaceState: !!context.workspaceState,
+        globalState: !!context.globalState
+    });
 
     // Get workspace folder
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -22,13 +28,18 @@ export function activate(context: vscode.ExtensionContext) {
     const commandExecutor = new CommandExecutor();
 
     // Register tree view
-    console.log('Registering tree view claudeWorkflow');
+    console.log('🌳 REGISTERING TREE VIEW: claudeWorkflow');
     const treeView = vscode.window.createTreeView('claudeWorkflow', {
         treeDataProvider: treeProvider,
         showCollapseAll: true,
         canSelectMany: false
     });
-    console.log('Tree view registered successfully');
+    console.log('✅ TREE VIEW REGISTERED SUCCESSFULLY!');
+    console.log('📋 Tree View Details:', {
+        title: treeView.title,
+        visible: treeView.visible,
+        selection: treeView.selection.length
+    });
 
     // Register commands
     const commands = [
@@ -156,29 +167,38 @@ export function activate(context: vscode.ExtensionContext) {
     ];
 
     // Register all commands for disposal
+    console.log(`🔧 REGISTERING ${commands.length} COMMANDS`);
     context.subscriptions.push(...commands);
     context.subscriptions.push(treeView);
     context.subscriptions.push(commandExecutor);
+    console.log('✅ ALL COMMANDS REGISTERED!');
 
     // Set up status bar item
+    console.log('📊 SETTING UP STATUS BAR');
     const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-    statusBarItem.text = '$(claude-logo) Claude Workflow';
+    statusBarItem.text = '$(tools) Claude Workflow';
     statusBarItem.tooltip = 'Claude Workflow Manager';
     statusBarItem.command = 'claudeWorkflow.showCurrent';
     statusBarItem.show();
     context.subscriptions.push(statusBarItem);
+    console.log('✅ STATUS BAR SETUP COMPLETE!');
 
     // Show welcome message
+    console.log('💬 SHOWING WELCOME MESSAGE');
     if (vscode.workspace.getConfiguration('claudeWorkflowManager').get('showWelcome', true)) {
         vscode.window.showInformationMessage(
-            'Claude Workflow Manager is now active! Check the Explorer panel for the workflow tree.',
-            'Don\'t show again'
+            '🎉 Claude Workflow Manager is now ACTIVE! Check the Explorer panel for the workflow tree.',
+            'Open Explorer', 'Don\'t show again'
         ).then(selection => {
             if (selection === 'Don\'t show again') {
                 vscode.workspace.getConfiguration('claudeWorkflowManager').update('showWelcome', false, vscode.ConfigurationTarget.Global);
+            } else if (selection === 'Open Explorer') {
+                vscode.commands.executeCommand('workbench.view.explorer');
             }
         });
     }
+    
+    console.log('🎯 CLAUDE WORKFLOW MANAGER ACTIVATION COMPLETE!');
 }
 
 export function deactivate() {
