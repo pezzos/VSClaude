@@ -561,8 +561,8 @@ body {
   transition: stroke-dasharray var(--transition-normal);
 }
 
-/* Quick Actions */
-.quick-actions h3 {
+/* Next Actions */
+.next-actions h3 {
   margin: 0 0 var(--spacing-lg);
   font-size: 18px;
 }
@@ -1737,8 +1737,8 @@ body {
   color: var(--success-color);
 }
 
-/* Quick Actions Sidebar */
-.quick-actions-sidebar {
+/* Next Actions Sidebar */
+.next-actions-sidebar {
   width: 200px;
   background-color: var(--surface-color);
   border-left: 1px solid var(--border-color);
@@ -1746,19 +1746,19 @@ body {
   overflow: auto;
 }
 
-.quick-actions-sidebar h4 {
+.next-actions-sidebar h4 {
   margin: 0 0 var(--spacing-lg);
   font-size: 14px;
   color: var(--vscode-descriptionForeground);
 }
 
-.quick-action-grid {
+.next-action-grid {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
 }
 
-.quick-action-btn {
+.next-action-btn {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
@@ -1773,17 +1773,17 @@ body {
   transition: background-color var(--transition-fast);
 }
 
-.quick-action-btn:hover {
+.next-action-btn:hover {
   background-color: var(--vscode-button-hoverBackground);
 }
 
-.quick-action-btn.primary {
+.next-action-btn.primary {
   background-color: var(--primary-color);
   color: var(--vscode-button-foreground);
   border-color: var(--primary-color);
 }
 
-.quick-action-btn.primary:hover {
+.next-action-btn.primary:hover {
   background-color: var(--primary-hover);
 }
 
@@ -1833,7 +1833,7 @@ body {
     align-items: flex-start;
   }
   
-  .quick-actions-sidebar {
+  .next-actions-sidebar {
     display: none;
   }
 }
@@ -2350,7 +2350,7 @@ select:focus-visible {
 /* Epic Actions */
 .epic-actions {
   display: flex;
-  gap: var(--spacing-md);
+  gap: var(--spacing-xs);
   flex-wrap: wrap;
 }
 
@@ -2360,13 +2360,13 @@ select:focus-visible {
 
 /* Epic List */
 .epic-list {
-  margin-top: var(--spacing-lg);
-  padding-top: var(--spacing-md);
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-xs);
   border-top: 1px solid var(--border-color);
 }
 
 .epic-list-title {
-  margin: 0 0 var(--spacing-sm) 0;
+  margin: 0 0 var(--spacing-xs) 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-color);
@@ -2423,7 +2423,7 @@ select:focus-visible {
 @media print {
   .app-nav,
   .status-bar,
-  .quick-actions-sidebar,
+  .next-actions-sidebar,
   .panel-actions,
   .action-buttons,
   .step-actions,

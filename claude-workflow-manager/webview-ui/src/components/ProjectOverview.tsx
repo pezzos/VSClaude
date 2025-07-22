@@ -228,9 +228,9 @@ export const ProjectOverview: React.FC = () => {
                 </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="quick-actions">
-                <h3>Quick Actions</h3>
+            {/* Next Actions */}
+            <div className="next-actions">
+                <h3>Next Actions</h3>
                 <div className="action-buttons">
                     {!projectState.currentEpic && (
                         <button 
