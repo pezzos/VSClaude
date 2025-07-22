@@ -10,9 +10,24 @@ export class OutputLogProvider implements vscode.TreeDataProvider<OutputLogItem>
     private outputLogs: OutputLogItem[] = [];
     private maxLogEntries = 20; // Keep last 20 command executions
     private refreshTimeouts = new Map<string, NodeJS.Timeout>(); // Throttling for real-time updates
+    private outputChannel: vscode.OutputChannel;
 
     constructor(private stateEventBus?: StateEventBus) {
+        this.outputChannel = vscode.window.createOutputChannel('Claude Workflow Manager - Output');
         // OutputLogProvider initialized - logs only go to extension's output panel
+    }
+
+    /**
+     * Central logging method that writes to extension's OutputChannel
+     */
+    private log(message: string, data?: unknown, level: 'info' | 'warn' | 'error' = 'info'): void {
+        const timestamp = new Date().toLocaleTimeString();
+        const prefix = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : 'ℹ️';
+        const formattedMessage = data 
+            ? `[${timestamp}] ${prefix} ${message} ${JSON.stringify(data)}`
+            : `[${timestamp}] ${prefix} ${message}`;
+        
+        this.outputChannel.appendLine(formattedMessage);
     }
 
     refresh(): void {
@@ -107,10 +122,10 @@ export class OutputLogProvider implements vscode.TreeDataProvider<OutputLogItem>
 
         if (isError) {
             logItem.stderr += output;
-            console.log(`❌ STDERR for ${id}: ${output.trim()}`);
+            this.log(`❌ STDERR for ${id}: ${output.trim()}`, undefined, 'error');
         } else {
             logItem.stdout += output;
-            console.log(`📤 STDOUT for ${id}: ${output.trim()}`);
+            this.log(`📤 STDOUT for ${id}: ${output.trim()}`);
         }
 
         // Emit log entry event for real-time streaming to webview
@@ -134,7 +149,7 @@ export class OutputLogProvider implements vscode.TreeDataProvider<OutputLogItem>
         }
         
         const timeout = setTimeout(() => {
-            console.log(`🔄 Refreshing UI for command ${id} due to new output`);
+            this.log(`🔄 Refreshing UI for command ${id} due to new output`);
             this.refresh();
             this.refreshTimeouts.delete(id);
         }, 200); // 200ms throttle
@@ -285,7 +300,7 @@ export class OutputLogProvider implements vscode.TreeDataProvider<OutputLogItem>
             
             return [];
         } catch (error) {
-            console.error('❌ ERROR in OutputLogProvider.getChildren:', error);
+            this.log('❌ ERROR in OutputLogProvider.getChildren:', error, 'error');
             return [{
                 id: 'error',
                 commandText: '',

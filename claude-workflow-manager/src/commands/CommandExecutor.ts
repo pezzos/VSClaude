@@ -24,18 +24,6 @@ export class CommandExecutor {
         
         // Only write to extension's OutputChannel, not VSCode console
         this.outputChannel.appendLine(formattedMessage);
-        
-        // Optionally add to log provider for persistent tracking
-        if (this.outputLogProvider) {
-            const logEntry: any = {
-                id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-                timestamp: Date.now(),
-                level: level,
-                message: message,
-                source: 'CommandExecutor'
-            };
-            // Add to extension log panel if needed
-        }
     }
 
     setOutputLogProvider(provider: OutputLogProvider): void {

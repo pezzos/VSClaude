@@ -60,7 +60,7 @@ export class StateManager {
     /**
      * Central logging method that writes to extension's OutputChannel
      */
-    private log(message: string, data?: any, level: 'info' | 'warn' | 'error' = 'info'): void {
+    private log(message: string, data?: unknown, level: 'info' | 'warn' | 'error' = 'info'): void {
         const timestamp = new Date().toLocaleTimeString();
         const prefix = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : 'ℹ️';
         const formattedMessage = data 

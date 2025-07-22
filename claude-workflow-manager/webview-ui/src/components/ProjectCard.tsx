@@ -292,7 +292,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                                                         }}
                                                         title={isExpanded ? "Collapse details" : "Expand details"}
                                                     >
-                                                        {isExpanded ? '▼' : '▶'}
+                                                        {isExpanded ? '-' : '+'}
                                                     </button>
                                                 </div>
                                             </div>

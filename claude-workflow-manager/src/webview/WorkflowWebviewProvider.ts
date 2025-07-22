@@ -33,6 +33,7 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
     private disposables: vscode.Disposable[] = [];
     private activeCommands = new Map<string, { command: string; startTime: number }>();
     private logEntryBuffer: SerializableLogEntry[] = [];
+    private outputChannel: vscode.OutputChannel;
     private logStreamTimer: NodeJS.Timeout | undefined;
 
     constructor(
@@ -42,7 +43,21 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
         private readonly commandExecutor: CommandExecutor,
         private readonly outputLogProvider: OutputLogProvider
     ) {
+        this.outputChannel = vscode.window.createOutputChannel('Claude Workflow Manager - Webview');
         this.setupEventListeners();
+    }
+
+    /**
+     * Central logging method that writes to extension's OutputChannel
+     */
+    private log(message: string, data?: unknown, level: 'info' | 'warn' | 'error' = 'info'): void {
+        const timestamp = new Date().toLocaleTimeString();
+        const prefix = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : 'ℹ️';
+        const formattedMessage = data 
+            ? `[${timestamp}] ${prefix} ${message} ${JSON.stringify(data)}`
+            : `[${timestamp}] ${prefix} ${message}`;
+        
+        this.outputChannel.appendLine(formattedMessage);
     }
 
     public resolveWebviewView(
@@ -179,7 +194,7 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
                 await this.handleGetCommandHistory(message);
             }
         } catch (error) {
-            console.error('Error handling webview message:', error);
+            this.log('Error handling webview message:', error, 'error');
             vscode.window.showErrorMessage(`Webview error: ${error}`);
         }
     }
@@ -231,7 +246,7 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
             const serializableState = this.convertToSerializableState(projectState);
             this.sendProjectStateUpdate(serializableState);
         } catch (error) {
-            console.error('Error getting project state:', error);
+            this.log('Error getting project state:', error, 'error');
         }
     }
 
@@ -264,7 +279,7 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
                 createMessage<CommandHistoryUpdateMessage>(MessageType.COMMAND_STATUS_UPDATE, { commandHistory })
             );
         } catch (error) {
-            console.error('Error getting command history:', error);
+            this.log('Error getting command history:', error, 'error');
         }
     }
 
@@ -364,7 +379,7 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
             const theme = this.getCurrentTheme();
             this.sendThemeUpdate(theme);
         } catch (error) {
-            console.error('Error refreshing webview:', error);
+            this.log('Error refreshing webview:', error, 'error');
         }
     }
 
@@ -532,7 +547,7 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
                 cssFile = cssFiles[0];
             }
         } catch (error) {
-            console.warn('Could not read assets directory, using default filenames:', error);
+            this.log('Could not read assets directory, using default filenames:', error, 'warn');
         }
 
         const scriptUri = webview.asWebviewUri(
@@ -579,7 +594,7 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
             );
 
             if (shouldRefresh) {
-                console.log(`🔄 Refreshing project state after command: ${command}`);
+                this.log(`🔄 Refreshing project state after command: ${command}`);
                 
                 // Add a small delay to ensure file system operations are complete
                 await new Promise(resolve => setTimeout(resolve, 1000));
@@ -594,10 +609,10 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
                 // Send updated state to webview
                 this.sendProjectStateUpdate(serializableState);
                 
-                console.log(`✅ Project state refreshed. Initialized: ${serializableState.isInitialized}`);
+                this.log(`✅ Project state refreshed. Initialized: ${serializableState.isInitialized}`);
             }
         } catch (error) {
-            console.error('Error refreshing project state after command:', error);
+            this.log('Error refreshing project state after command:', error, 'error');
         }
     }
 

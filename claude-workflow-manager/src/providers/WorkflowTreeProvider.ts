@@ -26,7 +26,7 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
     /**
      * Central logging method that writes to extension's OutputChannel
      */
-    private log(message: string, data?: any, level: 'info' | 'warn' | 'error' = 'info'): void {
+    private log(message: string, data?: unknown, level: 'info' | 'warn' | 'error' = 'info'): void {
         const timestamp = new Date().toLocaleTimeString();
         const prefix = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : 'ℹ️';
         const formattedMessage = data 
@@ -65,7 +65,7 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
             this.stateEventBus.on(StateEventType.EPIC_SELECTED, (event) => {
                 if (event.type === StateEventType.EPIC_SELECTED) {
                     const data = event.data as { epicId: string };
-                    console.log('🎯 Epic selected:', data.epicId);
+                    this.log('🎯 Epic selected:', data.epicId);
                     // Could expand the epic in tree view or highlight it
                 }
             })
@@ -75,7 +75,7 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
             this.stateEventBus.on(StateEventType.STORY_SELECTED, (event) => {
                 if (event.type === StateEventType.STORY_SELECTED) {
                     const data = event.data as { storyId: string };
-                    console.log('📝 Story selected:', data.storyId);
+                    this.log('📝 Story selected:', data.storyId);
                     // Could expand the story in tree view or highlight it
                 }
             })
@@ -89,19 +89,19 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
             const projectState = await this.stateManager.getProjectState();
             this.stateEventBus.emit(StateEventType.PROJECT_STATE_CHANGED, projectState);
         } catch (error) {
-            console.error('Error emitting project state change:', error);
+            this.log('Error emitting project state change:', error, 'error');
         }
     }
 
     refresh(): void {
-        console.log('🔄 REFRESH CALLED - Clearing project state and firing tree update');
+        this.log('🔄 REFRESH CALLED - Clearing project state and firing tree update');
         this.projectState = undefined; // Clear cached state
-        console.log('✅ Project state cleared, firing onDidChangeTreeData event');
+        this.log('✅ Project state cleared, firing onDidChangeTreeData event');
         this._onDidChangeTreeData.fire();
         
         // Force immediate re-evaluation to verify refresh works
         setTimeout(() => {
-            console.log('🔍 REFRESH VERIFICATION - Checking if tree was updated');
+            this.log('🔍 REFRESH VERIFICATION - Checking if tree was updated');
         }, 100);
     }
 
@@ -111,23 +111,23 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
 
     async getChildren(element?: WorkflowTreeItem): Promise<WorkflowTreeItem[]> {
         try {
-            console.log('🔍 GET CHILDREN CALLED');
-            console.log('📋 Element:', element?.label || 'ROOT');
+            this.log('🔍 GET CHILDREN CALLED');
+            this.log('📋 Element:', element?.label || 'ROOT');
             
             if (!this.projectState) {
-                console.log('🔄 Loading project state...');
-                console.log('📁 Workspace root for StateManager:', this.workspaceRoot);
+                this.log('🔄 Loading project state...');
+                this.log('📁 Workspace root for StateManager:', this.workspaceRoot);
                 
                 try {
                     this.projectState = await this.stateManager.getProjectState();
-                    console.log('✅ Project state loaded successfully!');
-                    console.log('📊 Project state details:', JSON.stringify(this.projectState, null, 2));
-                    console.log('🔍 Project state type:', typeof this.projectState);
-                    console.log('🔍 Project state null?', this.projectState === null);
-                    console.log('🔍 Project state undefined?', this.projectState === undefined);
+                    this.log('✅ Project state loaded successfully!');
+                    this.log('📊 Project state details:', this.projectState);
+                    this.log('🔍 Project state type:', typeof this.projectState);
+                    this.log('🔍 Project state null?', this.projectState === null);
+                    this.log('🔍 Project state undefined?', this.projectState === undefined);
                     
                     if (this.projectState) {
-                        console.log('✅ Project state properties:', {
+                        this.log('✅ Project state properties:', {
                             name: this.projectState.name,
                             initialized: this.projectState.initialized,
                             epicsLength: this.projectState.epics?.length || 0,
@@ -135,24 +135,24 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
                         });
                     }
                 } catch (error) {
-                    console.error('❌ ERROR loading project state:', error);
-                    console.error('Stack trace:', (error as Error).stack);
+                    this.log('❌ ERROR loading project state:', error, 'error');
+                    this.log('Stack trace:', (error as Error).stack, 'error');
                     this.projectState = undefined;
                 }
             }
 
             if (!element) {
                 // Root level - show project
-                console.log('🌟 Returning ROOT items');
+                this.log('🌟 Returning ROOT items');
                 const items = this.getRootItems();
-                console.log(`📊 Root items count: ${items.length}`);
+                this.log(`📊 Root items count: ${items.length}`);
                 items.forEach((item, index) => {
-                    console.log(`   ${index + 1}. ${item.label} (${item.itemType})`);
+                    this.log(`   ${index + 1}. ${item.label} (${item.itemType})`);
                 });
                 return items;
             }
 
-            console.log(`🔄 Processing element of type: ${element.itemType}`);
+            this.log(`🔄 Processing element of type: ${element.itemType}`);
             switch (element.itemType) {
                 case 'project':
                     return this.getProjectChildren();
@@ -163,12 +163,12 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
                 case 'story':
                     return this.getStoryChildren(element);
                 default:
-                    console.log(`⚠️ Unknown item type: ${element.itemType}`);
+                    this.log(`⚠️ Unknown item type: ${element.itemType}`, undefined, 'warn');
                     return [];
             }
         } catch (error) {
-            console.error('❌ ERROR in getChildren:', error);
-            console.error('Stack trace:', (error as Error).stack);
+            this.log('❌ ERROR in getChildren:', error, 'error');
+            this.log('Stack trace:', (error as Error).stack, 'error');
             
             // Return a fallback item to show the error
             return [{
@@ -180,11 +180,11 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
     }
 
     private getRootItems(): WorkflowTreeItem[] {
-        console.log('🌟 GET ROOT ITEMS - Project State exists:', !!this.projectState);
+        this.log('🌟 GET ROOT ITEMS - Project State exists:', !!this.projectState);
         
         // CRITICAL FIX: Never return empty array - always show something in tree
         if (!this.projectState) {
-            console.log('⚠️ No project state - showing fallback items');
+            this.log('⚠️ No project state - showing fallback items', undefined, 'warn');
             return [
                 {
                     label: '🔧 Claude Project Not Detected',
@@ -251,11 +251,11 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
         const items: WorkflowTreeItem[] = [];
 
         if (!this.projectState.initialized) {
-            console.log('🔧 Project not initialized, adding init action');
+            this.log('🔧 Project not initialized, adding init action');
             // Show initialization action
             try {
                 const initCommand = CommandRegistry.getCommand('initProject');
-                console.log('📋 Init command:', initCommand);
+                this.log('📋 Init command:', initCommand);
                 
                 const initItem: WorkflowTreeItem = {
                     label: '🔧 Initialize Project',
@@ -268,9 +268,9 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
                     contextValue: 'action'
                 };
                 items.push(initItem);
-                console.log('✅ Init item created successfully');
+                this.log('✅ Init item created successfully');
             } catch (error) {
-                console.error('❌ Error creating init item:', error);
+                this.log('❌ Error creating init item:', error, 'error');
                 // Fallback without command
                 const initItem: WorkflowTreeItem = {
                     label: '🔧 Initialize Project (Fallback)',
