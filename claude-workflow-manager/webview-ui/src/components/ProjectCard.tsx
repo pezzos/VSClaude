@@ -11,7 +11,6 @@ interface ProjectCardProps {
 }
 
 export const ProjectCard: React.FC<ProjectCardProps> = ({
-    projectName,
     isExpanded,
     onToggleExpanded,
     logs,
@@ -183,7 +182,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             >
                 <div className="project-info">
                     <h3 className="project-name">
-                        {projectName || 'Current Project'}
+                        Claude Code output
                     </h3>
                     <div className="project-status">
                         {initInProgress ? (

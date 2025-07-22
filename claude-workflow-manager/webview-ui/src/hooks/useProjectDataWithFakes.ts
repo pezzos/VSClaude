@@ -4,7 +4,6 @@ import { useProjectData as useRealProjectData } from './useProjectState';
 import { 
     createFakeProjectState, 
     createFakeLogs, 
-    createFakeCommandHistory,
     createFakeStats 
 } from '../mocks/fakeData';
 
