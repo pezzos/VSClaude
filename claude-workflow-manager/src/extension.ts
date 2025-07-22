@@ -91,21 +91,42 @@ export function activate(context: vscode.ExtensionContext) {
 
             if (result === 'Yes') {
                 console.log('🚀 STARTING PROJECT INITIALIZATION');
-                await commandExecutor.executeCommand('/1-project:1-start:1-Init-Project');
-                vscode.window.showInformationMessage('Project initialization started');
-                console.log('✅ Project initialization command completed, scheduling refresh...');
                 
-                // Use longer delay and multiple refreshes to ensure state is updated
-                setTimeout(() => {
-                    console.log('⏰ FIRST REFRESH (5s after init)');
-                    treeProvider.refresh();
-                }, 5000);
+                // Execute initialization command
+                const success = await commandExecutor.executeCommand('/1-project:1-start:1-Init-Project');
                 
-                // Backup refresh in case files take longer to be created
-                setTimeout(() => {
-                    console.log('⏰ BACKUP REFRESH (8s after init)');
-                    treeProvider.refresh();
-                }, 8000);
+                if (success) {
+                    vscode.window.showInformationMessage('Project initialization started - waiting for completion...');
+                    console.log('✅ Project initialization command completed, starting intelligent polling...');
+                    
+                    // Use intelligent polling with comprehensive validation
+                    const result = await treeProvider.waitForInitializationWithValidation(300000); // 5 minutes timeout
+                    
+                    if (result.success) {
+                        console.log('🎉 Initialization completed with full validation! Refreshing tree...');
+                        treeProvider.refresh();
+                        vscode.window.showInformationMessage('🎉 Project initialization completed successfully!');
+                    } else {
+                        console.log('⚠️ Initialization incomplete or validation failed');
+                        treeProvider.refresh(); // Refresh anyway to show current state
+                        
+                        if (result.validation) {
+                            const { missingFiles, invalidFiles } = result.validation;
+                            let message = 'Initialization validation failed. ';
+                            if (missingFiles.length > 0) {
+                                message += `Missing files: ${missingFiles.join(', ')}. `;
+                            }
+                            if (invalidFiles.length > 0) {
+                                message += `Invalid files: ${invalidFiles.join(', ')}. `;
+                            }
+                            vscode.window.showWarningMessage(message + 'Check the Claude Workflow Manager output channel for details.');
+                        } else {
+                            vscode.window.showWarningMessage('Initialization timeout. Check the Claude Workflow Manager output channel for details.');
+                        }
+                    }
+                } else {
+                    vscode.window.showErrorMessage('Project initialization command failed');
+                }
             }
         }),
 

@@ -5,6 +5,13 @@ import { OutputLogProvider } from '../providers/OutputLogProvider';
 
 export class CommandExecutor {
     private outputLogProvider: OutputLogProvider | undefined;
+    private outputChannel: vscode.OutputChannel;
+
+    constructor() {
+        // Create dedicated OutputChannel for Claude Workflow Manager logs
+        this.outputChannel = vscode.window.createOutputChannel('Claude Workflow Manager');
+        console.log('🔧 CommandExecutor: OutputChannel created for real-time logging');
+    }
 
     setOutputLogProvider(provider: OutputLogProvider): void {
         this.outputLogProvider = provider;
@@ -47,37 +54,71 @@ export class CommandExecutor {
         return 180000; // 3 minutes (increased from 60s default)
     }
 
-    async executeCommand(command: string, showProgress: boolean = true): Promise<boolean> {
-        try {
-            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            if (!workspaceRoot) {
-                vscode.window.showErrorMessage('No workspace folder open');
-                return false;
+    async executeCommand(command: string, showProgress: boolean = true, maxRetries: number = 2): Promise<boolean> {
+        let lastError: Error | undefined;
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                if (!workspaceRoot) {
+                    vscode.window.showErrorMessage('No workspace folder open');
+                    return false;
+                }
+
+                // Add command to output log
+                const logId = this.outputLogProvider?.addCommand(command);
+
+                const progressOptions = {
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Executing: ${command}${attempt > 1 ? ` (Retry ${attempt - 1}/${maxRetries - 1})` : ''}`,
+                    cancellable: true
+                };
+
+                let result: boolean;
+                if (!showProgress) {
+                    // Execute without progress notification
+                    result = await this.executeClaudeProcess(command, workspaceRoot, logId);
+                } else {
+                    // Show progress notification
+                    result = await vscode.window.withProgress(progressOptions, async (progress, token) => {
+                        return this.executeClaudeProcess(command, workspaceRoot, logId, token);
+                    });
+                }
+
+                if (result) {
+                    if (attempt > 1) {
+                        this.outputChannel.appendLine(`✅ Command succeeded on retry ${attempt - 1}`);
+                        console.log(`✅ Command succeeded on retry ${attempt - 1}`);
+                    }
+                    return true;
+                }
+
+                // If command failed and we have retries left
+                if (attempt < maxRetries) {
+                    const retryDelay = Math.min(2000 * attempt, 10000); // Progressive delay, max 10s
+                    this.outputChannel.appendLine(`⚠️ Command failed, retrying in ${retryDelay/1000}s... (Attempt ${attempt}/${maxRetries})`);
+                    console.log(`⚠️ Command failed, retrying in ${retryDelay/1000}s... (Attempt ${attempt}/${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                }
+
+            } catch (error) {
+                lastError = error instanceof Error ? error : new Error(String(error));
+                this.outputChannel.appendLine(`❌ Error on attempt ${attempt}: ${lastError.message}`);
+                console.error(`❌ Error on attempt ${attempt}:`, lastError);
+                
+                if (attempt < maxRetries) {
+                    const retryDelay = Math.min(2000 * attempt, 10000);
+                    this.outputChannel.appendLine(`🔄 Retrying in ${retryDelay/1000}s due to error...`);
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                }
             }
-
-            // Add command to output log
-            const logId = this.outputLogProvider?.addCommand(command);
-
-            const progressOptions = {
-                location: vscode.ProgressLocation.Notification,
-                title: `Executing: ${command}`,
-                cancellable: true
-            };
-
-            if (!showProgress) {
-                // Execute without progress notification
-                return this.executeClaudeProcess(command, workspaceRoot, logId);
-            }
-
-            // Show progress notification
-            return vscode.window.withProgress(progressOptions, async (progress, token) => {
-                return this.executeClaudeProcess(command, workspaceRoot, logId, token);
-            });
-        } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unknown error';
-            vscode.window.showErrorMessage(`Failed to execute command: ${message}`);
-            return false;
         }
+
+        // All retries exhausted
+        const message = lastError?.message || 'Command failed after all retries';
+        this.outputChannel.appendLine(`❌ Command failed after ${maxRetries} attempts: ${message}`);
+        vscode.window.showErrorMessage(`Failed to execute command after ${maxRetries} attempts: ${message}`);
+        return false;
     }
 
     private async executeClaudeProcess(
@@ -94,6 +135,13 @@ export class CommandExecutor {
             console.log(`🚀 Executing command: ${fullCommand}`);
             console.log(`📁 Working directory: ${workspaceRoot}`);
             console.log(`⏰ Timeout set to: ${timeoutSeconds} seconds`);
+            
+            // Show OutputChannel for long-running commands
+            this.outputChannel.show(true);
+            this.outputChannel.appendLine(`🚀 Starting: ${command}`);
+            this.outputChannel.appendLine(`📁 Working in: ${workspaceRoot}`);
+            this.outputChannel.appendLine(`⏰ Timeout: ${timeoutSeconds}s`);
+            this.outputChannel.appendLine('─'.repeat(50));
 
             // Spawn child process with captured stdio and anti-buffering environment
             const child = cp.spawn('claude', ['-p', command], {
@@ -102,11 +150,17 @@ export class CommandExecutor {
                 shell: true,
                 env: {
                     ...process.env,
+                    // Enhanced anti-buffering environment
                     PYTHONUNBUFFERED: '1',        // Disable Python buffering
+                    PYTHONIOENCODING: 'utf-8',    // Force UTF-8 encoding
                     NODE_NO_READLINE: '1',        // Disable Node.js readline buffering
+                    RUST_LOG_STYLE: 'never',      // Disable Rust formatting
                     FORCE_COLOR: '0',             // Disable ANSI colors
                     NO_COLOR: '1',                // Another way to disable colors
-                    TERM: 'dumb'                  // Simple terminal to avoid formatting
+                    TERM: 'dumb',                 // Simple terminal to avoid formatting
+                    COLUMNS: '120',               // Fixed column width
+                    LINES: '24',                  // Fixed line height
+                    DEBIAN_FRONTEND: 'noninteractive'  // Non-interactive mode
                 }
             });
 
@@ -119,22 +173,28 @@ export class CommandExecutor {
 
             console.log(`🔢 Process PID: ${child.pid}`);
 
-            // Capture stdout
+            // Capture stdout with real-time OutputChannel logging
             child.stdout?.on('data', (data: Buffer) => {
                 const output = data.toString();
                 stdout += output;
                 console.log(`📤 STDOUT: ${output}`);
+                
+                // Real-time logging to VSCode OutputChannel
+                this.outputChannel.append(output);
                 
                 if (logId && this.outputLogProvider) {
                     this.outputLogProvider.appendOutput(logId, output, false);
                 }
             });
 
-            // Capture stderr
+            // Capture stderr with real-time OutputChannel logging
             child.stderr?.on('data', (data: Buffer) => {
                 const output = data.toString();
                 stderr += output;
                 console.log(`❌ STDERR: ${output}`);
+                
+                // Real-time logging to VSCode OutputChannel with error prefix
+                this.outputChannel.append(`[ERROR] ${output}`);
                 
                 if (logId && this.outputLogProvider) {
                     this.outputLogProvider.appendOutput(logId, output, true);
@@ -223,7 +283,8 @@ export class CommandExecutor {
     }
 
     dispose(): void {
-        // No resources to clean up in the new implementation
+        // Clean up OutputChannel
+        this.outputChannel.dispose();
         console.log('🧹 CommandExecutor disposed');
     }
 }

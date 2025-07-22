@@ -476,4 +476,18 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
 
         return commands;
     }
+
+    /**
+     * Wait for project initialization to complete using intelligent polling
+     */
+    async waitForInitialization(timeoutMs?: number): Promise<boolean> {
+        return this.stateManager.waitForInitialization(timeoutMs);
+    }
+
+    /**
+     * Wait for project initialization with comprehensive validation
+     */
+    async waitForInitializationWithValidation(timeoutMs?: number): Promise<{ success: boolean; validation?: { valid: boolean; missingFiles: string[]; invalidFiles: string[] } }> {
+        return this.stateManager.waitForInitializationWithValidation(timeoutMs);
+    }
 }
