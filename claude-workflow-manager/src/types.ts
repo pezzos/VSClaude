@@ -58,3 +58,16 @@ export interface FileParseResult<T> {
     data?: T;
     error?: string;
 }
+
+export interface OutputLogItem extends vscode.TreeItem {
+    id: string;
+    commandText: string;
+    startTime: Date;
+    endTime?: Date;
+    status: 'running' | 'completed' | 'failed' | 'cancelled';
+    stdout: string;
+    stderr: string;
+    exitCode?: number;
+    duration?: number;
+    itemType: 'command' | 'output' | 'error';
+}

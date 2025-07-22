@@ -34,6 +34,11 @@
         {
           "id": "claudeWorkflow",
           "name": "Workflow Manager"
+        },
+        {
+          "id": "claudeOutput",
+          "name": "Command Output",
+          "when": "true"
         }
       ]
     },
@@ -81,6 +86,16 @@
         "command": "claudeWorkflow.openFile",
         "title": "Open File",
         "icon": "$(go-to-file)"
+      },
+      {
+        "command": "claudeWorkflow.refreshOutput",
+        "title": "Refresh Output",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "claudeWorkflow.clearOutput",
+        "title": "Clear Output",
+        "icon": "$(clear-all)"
       }
     ],
     "menus": {
@@ -88,6 +103,16 @@
         {
           "command": "claudeWorkflow.refresh",
           "when": "view == claudeWorkflow",
+          "group": "navigation"
+        },
+        {
+          "command": "claudeWorkflow.refreshOutput",
+          "when": "view == claudeOutput",
+          "group": "navigation"
+        },
+        {
+          "command": "claudeWorkflow.clearOutput",
+          "when": "view == claudeOutput",
           "group": "navigation"
         }
       ],

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { WorkflowTreeProvider } from './providers/WorkflowTreeProvider';
+import { OutputLogProvider } from './providers/OutputLogProvider';
 import { CommandExecutor } from './commands/CommandExecutor';
 import { ClaudeCommand } from './types';
 
@@ -25,7 +26,11 @@ export function activate(context: vscode.ExtensionContext) {
     
     // Initialize providers
     const treeProvider = new WorkflowTreeProvider(workspaceRoot);
+    const outputLogProvider = new OutputLogProvider();
     const commandExecutor = new CommandExecutor();
+    
+    // Connect CommandExecutor to OutputLogProvider
+    commandExecutor.setOutputLogProvider(outputLogProvider);
 
     // Register tree view
     console.log('🌳 REGISTERING TREE VIEW: claudeWorkflow');
@@ -35,6 +40,15 @@ export function activate(context: vscode.ExtensionContext) {
         canSelectMany: false
     });
     console.log('✅ TREE VIEW REGISTERED SUCCESSFULLY!');
+
+    // Register output log view
+    console.log('🔧 REGISTERING OUTPUT LOG VIEW: claudeOutput');
+    const outputView = vscode.window.createTreeView('claudeOutput', {
+        treeDataProvider: outputLogProvider,
+        showCollapseAll: true,
+        canSelectMany: false
+    });
+    console.log('✅ OUTPUT LOG VIEW REGISTERED SUCCESSFULLY!');
     console.log('📋 Tree View Details:', {
         title: treeView.title,
         visible: treeView.visible,
@@ -196,6 +210,18 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('claudeWorkflow.clearContext', async () => {
             await commandExecutor.executeCommand('/clear');
             vscode.window.showInformationMessage('Context cleared');
+        }),
+
+        // Output panel commands
+        vscode.commands.registerCommand('claudeWorkflow.refreshOutput', () => {
+            console.log('🔄 REFRESH OUTPUT PANEL COMMAND');
+            outputLogProvider.refresh();
+        }),
+
+        vscode.commands.registerCommand('claudeWorkflow.clearOutput', () => {
+            console.log('🗑️ CLEAR OUTPUT PANEL COMMAND');
+            outputLogProvider.clear();
+            vscode.window.showInformationMessage('Output log cleared');
         })
     ];
 
@@ -203,6 +229,7 @@ export function activate(context: vscode.ExtensionContext) {
     console.log(`🔧 REGISTERING ${commands.length} COMMANDS`);
     context.subscriptions.push(...commands);
     context.subscriptions.push(treeView);
+    context.subscriptions.push(outputView);
     context.subscriptions.push(commandExecutor);
     console.log('✅ ALL COMMANDS REGISTERED!');
 
