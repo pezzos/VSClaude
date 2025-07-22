@@ -22,8 +22,7 @@ import {
     CommandStatusUpdateMessage,
     ThemeUpdateMessage,
     CommandHistoryUpdateMessage,
-    LogEntryStreamMessage,
-    InitProgressUpdateMessage
+    LogEntryStreamMessage
 } from './protocol';
 import { ProjectState, ProjectStatus } from '../types';
 
