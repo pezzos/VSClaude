@@ -4,6 +4,7 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { StateEventBus, StateEventType } from './StateEventBus';
 import { StateManager } from '../providers/StateManager';
 import { CommandExecutor } from '../commands/CommandExecutor';
@@ -494,12 +495,34 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     private getWebviewContent(webview: vscode.Webview): string {
-        // Get URIs for resources
+        // Dynamically discover asset filenames
+        const assetsPath = path.join(this.context.extensionPath, 'out', 'webview-ui', 'assets');
+        let jsFile = 'index.js';
+        let cssFile = 'index.css';
+        
+        try {
+            const files = fs.readdirSync(assetsPath);
+            
+            // Find JS file (main-*.js or index-*.js)
+            const jsFiles = files.filter((f: string) => f.endsWith('.js') && (f.startsWith('main-') || f.startsWith('index-')));
+            if (jsFiles.length > 0) {
+                jsFile = jsFiles[0];
+            }
+            
+            // Find CSS file (index-*.css)
+            const cssFiles = files.filter((f: string) => f.endsWith('.css') && f.startsWith('index-'));
+            if (cssFiles.length > 0) {
+                cssFile = cssFiles[0];
+            }
+        } catch (error) {
+            console.warn('Could not read assets directory, using default filenames');
+        }
+
         const scriptUri = webview.asWebviewUri(
-            vscode.Uri.file(path.join(this.context.extensionPath, 'out', 'webview-ui', 'assets', 'index.js'))
+            vscode.Uri.file(path.join(assetsPath, jsFile))
         );
         const styleUri = webview.asWebviewUri(
-            vscode.Uri.file(path.join(this.context.extensionPath, 'out', 'webview-ui', 'assets', 'index.css'))
+            vscode.Uri.file(path.join(assetsPath, cssFile))
         );
 
         return `<!DOCTYPE html>

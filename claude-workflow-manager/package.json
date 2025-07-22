@@ -32,15 +32,14 @@
     "views": {
       "claude-workflow": [
         {
+          "id": "claudeWorkflowWebview",
+          "name": "Workflow Dashboard",
+          "type": "webview"
+        },
+        {
           "id": "claudeWorkflow",
           "name": "Workflow Manager",
           "when": "false"
-        },
-        {
-          "id": "claudeWorkflowWebview",
-          "name": "Workflow Dashboard",
-          "type": "webview",
-          "when": "true"
         },
         {
           "id": "claudeOutput",

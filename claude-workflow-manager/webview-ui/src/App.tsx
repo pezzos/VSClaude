@@ -34,6 +34,9 @@ export const App: React.FC = () => {
         );
     }
 
+    // Debug: Add a simple test to ensure React is working
+    console.log('App rendering, projectState:', projectState);
+
     if (error) {
         return (
             <div className="app error">
@@ -47,6 +50,12 @@ export const App: React.FC = () => {
 
     return (
         <div className="app dashboard">
+            {/* Simple debug header */}
+            <div style={{padding: '20px', background: '#2d3748', color: 'white', border: '1px solid #4a5568', borderRadius: '8px', marginBottom: '16px'}}>
+                <h2>🚀 Claude Workflow Manager Dashboard</h2>
+                <p>Debug Info: {projectState ? 'Project loaded' : 'No project'}, Loading: {isLoading ? 'Yes' : 'No'}</p>
+            </div>
+
             {/* Action Header */}
             <ActionHeader
                 isInitialized={projectState?.isInitialized || false}
@@ -65,7 +74,7 @@ export const App: React.FC = () => {
                 onToggleExpanded={() => setIsLogCardExpanded(!isLogCardExpanded)}
                 logs={initLogs}
                 isStreaming={!!streamingCommandId}
-                initInProgress={initInProgress}
+                initInProgress={initInProgress || false}
             />
 
             {/* Project Overview Content */}
