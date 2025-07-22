@@ -557,15 +557,11 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
         try {
             // Commands that may change project state
             const stateChangingCommands = [
-                'Init-Project',
-                'Import-FEEDBACK.md', 
-                'Plan-Epics',
                 '/1-project:1-start:1-Init-Project',
-                '/project:agile:start',
-                '/project:agile:design',
-                '/project:agile:plan',
-                '/project:agile:iterate',
-                '/project:agile:ship'
+                '/1-project:3-epics:1-Plan-Epics', 
+                '/2-epic:1-start:2-Plan-stories',
+                '/4-ticket:2-execute:3-Implement',
+                '/4-ticket:2-execute:1-Plan-Ticket'
             ];
 
             // Check if this command might have changed the project state

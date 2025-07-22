@@ -1,5 +1,6 @@
 {
-  "isInitialized": false,
+  "isInitialized": true,
+  "lastInitDate": 1753203915677,
   "commandHistory": [],
   "projectMetadata": {
     "name": "VSClaude",
@@ -10,5 +11,5 @@
     "autoSave": true,
     "logRetentionDays": 30
   },
-  "lastUpdated": 1753196645133
+  "lastUpdated": 1753203915677
 }

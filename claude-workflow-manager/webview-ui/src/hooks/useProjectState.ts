@@ -65,7 +65,7 @@ export function useProjectState(): ProjectStateHook {
                     const { commandId, command, status, progress, output, error: cmdError } = message;
                     
                     // Track initialization commands
-                    if (command.includes('Init-Project')) {
+                    if (command.includes('/1-project:1-start:1-Init-Project')) {
                         setInitInProgress(status === CommandStatus.RUNNING);
                     }
                     

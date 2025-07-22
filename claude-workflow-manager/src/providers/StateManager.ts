@@ -63,22 +63,58 @@ export class StateManager {
         };
         console.log('Initial state created:', state);
 
-        // Check if project is initialized
+        // Check if project is initialized - adapt to VSClaude structure
         const readmePath = path.join(this.workspaceRoot, 'README.md');
-        const epicsPath = path.join(this.workspaceRoot, 'docs/1-project/EPICS.md');
+        
+        // For VSClaude: look for the actual project structure indicators
+        const vscodeInitIndicators = [
+            'docs/1-project/PROJECT_VISION.md',
+            'docs/1-project/ROADMAP.md',
+            'docs/2-current-epic/PRD.md'
+        ];
+        
+        // Legacy detection for standard Claude Code projects
+        const legacyEpicsPath = path.join(this.workspaceRoot, 'docs/1-project/EPICS.md');
         
         if (await this.fileExists(readmePath)) {
             state.name = await this.extractProjectName(readmePath);
         }
 
-        if (await this.fileExists(epicsPath)) {
+        // Check initialization using VSClaude structure first
+        const vscodeStructureExists = await Promise.all(
+            vscodeInitIndicators.map(indicator => 
+                this.fileExists(path.join(this.workspaceRoot, indicator))
+            )
+        );
+        
+        const hasVSCodeStructure = vscodeStructureExists.some(exists => exists);
+        const hasLegacyStructure = await this.fileExists(legacyEpicsPath);
+        
+        console.log('🔍 Project structure detection:', {
+            hasVSCodeStructure,
+            hasLegacyStructure,
+            vscodeFiles: vscodeInitIndicators.map((file, i) => ({ file, exists: vscodeStructureExists[i] }))
+        });
+
+        if (hasVSCodeStructure || hasLegacyStructure) {
             state.initialized = true;
-            state.epics = await this.loadEpics();
+            console.log('✅ Project detected as initialized');
+            
+            // Load epics from appropriate source
+            if (hasLegacyStructure) {
+                state.epics = await this.loadEpics();
+            } else {
+                // For VSClaude, epics might be in different format/location
+                state.epics = await this.loadVSClaudeEpics();
+            }
+            
             state.currentEpic = await this.getCurrentEpic();
             
             if (state.currentEpic) {
                 state.currentStory = await this.getCurrentStory(state.currentEpic);
             }
+        } else {
+            console.log('❌ Project not detected as initialized');
         }
 
         // Check update command availability
@@ -91,13 +127,25 @@ export class StateManager {
     }
 
     async canImportFeedback(): Promise<boolean> {
-        return !this.initInProgress && await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/EPICS.md'));
+        if (this.initInProgress) return false;
+        
+        // Check for either legacy or VSClaude structure
+        const legacyEpicsExists = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/EPICS.md'));
+        const vscodeInitialized = await this.isVSClaudeInitialized();
+        
+        return legacyEpicsExists || vscodeInitialized;
     }
 
     async canPlanEpics(): Promise<boolean> {
+        if (this.initInProgress) return false;
+        
         const feedbackExists = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/FEEDBACK.md'));
-        const epicsExists = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/EPICS.md'));
-        return !this.initInProgress && feedbackExists && epicsExists;
+        
+        // Check for either legacy or VSClaude structure
+        const legacyEpicsExists = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/EPICS.md'));
+        const vscodeInitialized = await this.isVSClaudeInitialized();
+        
+        return feedbackExists && (legacyEpicsExists || vscodeInitialized);
     }
 
     getInitInProgress(): boolean {
@@ -214,6 +262,55 @@ export class StateManager {
         return undefined;
     }
 
+    /**
+     * Check if VSClaude project structure indicates initialization
+     */
+    private async isVSClaudeInitialized(): Promise<boolean> {
+        const vscodeInitIndicators = [
+            'docs/1-project/PROJECT_VISION.md',
+            'docs/1-project/ROADMAP.md',
+            'docs/2-current-epic/PRD.md'
+        ];
+        
+        const existsChecks = await Promise.all(
+            vscodeInitIndicators.map(indicator => 
+                this.fileExists(path.join(this.workspaceRoot, indicator))
+            )
+        );
+        
+        return existsChecks.some(exists => exists);
+    }
+
+    /**
+     * Load epics from VSClaude project structure
+     */
+    private async loadVSClaudeEpics(): Promise<Epic[]> {
+        // For VSClaude structure, we might need to extract epics from different sources
+        // For now, try to extract from ROADMAP.md or other available documents
+        const prdPath = path.join(this.workspaceRoot, 'docs/2-current-epic/PRD.md');
+        
+        const epics: Epic[] = [];
+        
+        // Try to extract epic information from current PRD
+        if (await this.fileExists(prdPath)) {
+            try {
+                const content = await fs.promises.readFile(prdPath, 'utf8');
+                const parseResult = this.parsers.epic.parseEpic(content);
+                if (parseResult.success && parseResult.data) {
+                    const epic = parseResult.data;
+                    epic.stories = await this.loadStoriesForEpic(epic.id);
+                    epics.push(epic);
+                }
+            } catch (error) {
+                console.error('Error loading VSClaude epic from PRD:', error);
+            }
+        }
+        
+        // TODO: In the future, might parse ROADMAP.md for additional epics
+        
+        return epics;
+    }
+
     async watchForChanges(onStateChanged: () => void): Promise<vscode.Disposable[]> {
         const disposables: vscode.Disposable[] = [];
         
@@ -252,23 +349,37 @@ export class StateManager {
         return new Promise((resolve) => {
             const poll = async () => {
                 try {
-                    // Check if initialization is complete
-                    const epicsPath = path.join(this.workspaceRoot, 'docs/1-project/EPICS.md');
+                    // Check if initialization is complete using new detection logic
                     const readmePath = path.join(this.workspaceRoot, 'README.md');
-                    
-                    const epicsExists = await this.fileExists(epicsPath);
                     const readmeExists = await this.fileExists(readmePath);
                     
-                    console.log(`📋 Polling check: EPICS.md=${epicsExists}, README.md=${readmeExists}`);
+                    // Check for both legacy and VSClaude structures
+                    const legacyEpicsPath = path.join(this.workspaceRoot, 'docs/1-project/EPICS.md');
+                    const legacyExists = await this.fileExists(legacyEpicsPath);
+                    const vscodeInitialized = await this.isVSClaudeInitialized();
                     
-                    if (epicsExists && readmeExists) {
+                    console.log(`📋 Polling check: README.md=${readmeExists}, Legacy=${legacyExists}, VSCode=${vscodeInitialized}`);
+                    
+                    if (readmeExists && (legacyExists || vscodeInitialized)) {
                         // Additional validation: check if files have content
-                        const epicsValid = await this.validateFileContent(epicsPath);
                         const readmeValid = await this.validateFileContent(readmePath);
                         
-                        console.log(`✅ Content validation: EPICS.md=${epicsValid}, README.md=${readmeValid}`);
+                        let structureValid = false;
+                        if (legacyExists) {
+                            structureValid = await this.validateFileContent(legacyEpicsPath);
+                        } else if (vscodeInitialized) {
+                            // Validate VSClaude structure
+                            const prdPath = path.join(this.workspaceRoot, 'docs/2-current-epic/PRD.md');
+                            const roadmapPath = path.join(this.workspaceRoot, 'docs/1-project/ROADMAP.md');
+                            
+                            const prdValid = await this.fileExists(prdPath) ? await this.validateFileContent(prdPath) : false;
+                            const roadmapValid = await this.fileExists(roadmapPath) ? await this.validateFileContent(roadmapPath) : false;
+                            structureValid = prdValid || roadmapValid;
+                        }
                         
-                        if (epicsValid && readmeValid) {
+                        console.log(`✅ Content validation: README.md=${readmeValid}, Structure=${structureValid}`);
+                        
+                        if (readmeValid && structureValid) {
                             console.log('🎉 Project initialization completed successfully!');
                             resolve(true);
                             return;
@@ -314,16 +425,45 @@ export class StateManager {
      * Comprehensive validation of project structure after initialization
      */
     async validateProjectStructure(): Promise<{ valid: boolean; missingFiles: string[]; invalidFiles: string[] }> {
-        const requiredFiles = [
+        // Define structure for both legacy and VSClaude projects
+        const legacyRequiredFiles = [
             'README.md',
             'docs/1-project/EPICS.md',
             'docs/1-project/ROADMAP.md'
+        ];
+        
+        const vscodeRequiredFiles = [
+            'README.md',
+            'docs/1-project/PROJECT_VISION.md',
+            'docs/1-project/ROADMAP.md',
+            'docs/2-current-epic/PRD.md'
         ];
 
         const missingFiles: string[] = [];
         const invalidFiles: string[] = [];
 
         console.log('🔍 Validating complete project structure...');
+
+        // Determine which structure to validate based on what exists
+        const legacyExists = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/EPICS.md'));
+        const vscodeExists = await this.isVSClaudeInitialized();
+        
+        let requiredFiles: string[];
+        let structureType: string;
+        
+        if (legacyExists) {
+            requiredFiles = legacyRequiredFiles;
+            structureType = 'Legacy Claude Code';
+        } else if (vscodeExists) {
+            requiredFiles = vscodeRequiredFiles;
+            structureType = 'VSClaude';
+        } else {
+            // Try VSClaude structure as default
+            requiredFiles = vscodeRequiredFiles;
+            structureType = 'VSClaude (default)';
+        }
+        
+        console.log(`🏗️ Validating ${structureType} project structure`);
 
         for (const relativePath of requiredFiles) {
             const fullPath = path.join(this.workspaceRoot, relativePath);
@@ -343,7 +483,7 @@ export class StateManager {
         }
 
         const valid = missingFiles.length === 0 && invalidFiles.length === 0;
-        console.log(`📊 Project validation result: ${valid ? 'VALID' : 'INVALID'}`);
+        console.log(`📊 ${structureType} project validation result: ${valid ? 'VALID' : 'INVALID'}`);
         
         return { valid, missingFiles, invalidFiles };
     }

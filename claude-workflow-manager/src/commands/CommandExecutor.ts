@@ -22,11 +22,11 @@ export class CommandExecutor {
         
         // Commands that require very long timeouts (10 minutes)
         const longCommands = [
-            'Init-Project',
-            'Plan-Epics', 
-            'Plan-stories',
-            'Implement',
-            'Plan-Ticket'
+            '/1-project:1-start:1-Init-Project',
+            '/1-project:3-epics:1-Plan-Epics', 
+            '/2-epic:1-start:2-Plan-stories',
+            '/4-ticket:2-execute:3-Implement',
+            '/4-ticket:2-execute:1-Plan-Ticket'
         ];
         
         // Commands that require medium timeouts (5 minutes)

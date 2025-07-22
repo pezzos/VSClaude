@@ -78,7 +78,7 @@ export const CommandPanel: React.FC<CommandPanelProps> = ({ className }) => {
                 {
                     id: 'init-project',
                     name: 'Initialize Project',
-                    command: '/project:init',
+                    command: '/1-project:1-start:1-Init-Project',
                     description: 'Initialize a new Claude workflow project',
                     args: ['New Project'],
                     icon: <Play className="command-icon" />,
