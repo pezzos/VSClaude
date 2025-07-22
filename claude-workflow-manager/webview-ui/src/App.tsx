@@ -116,7 +116,7 @@ export const App: React.FC = () => {
                 
                 <div className="status-right">
                     <div className="status-item">
-                        <span>Claude Workflow Manager v0.1.6</span>
+                        <span>Claude Workflow Manager</span>
                     </div>
                 </div>
             </div>

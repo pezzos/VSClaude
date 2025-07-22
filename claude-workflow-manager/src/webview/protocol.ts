@@ -103,6 +103,10 @@ export interface SerializableProjectState {
     epics: SerializableEpic[];
     recentCommands: CommandHistoryEntry[];
     lastUpdated: number;
+    // Additional state for button visibility logic
+    hasFeedback: boolean;
+    hasChallenge: boolean;
+    hasStatus: boolean;
 }
 
 export interface SerializableEpic {

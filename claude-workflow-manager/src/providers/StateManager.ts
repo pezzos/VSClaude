@@ -6,6 +6,31 @@ import { ProjectParser } from '../parsers/ProjectParser';
 import { EpicParser } from '../parsers/EpicParser';
 import { StoryParser } from '../parsers/StoryParser';
 
+/**
+ * Interface for persisted state data stored in .claude-wm/state.json
+ */
+interface PersistedState {
+    isInitialized: boolean;
+    lastInitDate?: number;
+    commandHistory: Array<{
+        command: string;
+        timestamp: number;
+        success: boolean;
+        output?: string;
+        duration?: number;
+    }>;
+    projectMetadata: {
+        name?: string;
+        version?: string;
+        description?: string;
+    };
+    settings: {
+        autoSave: boolean;
+        logRetentionDays: number;
+    };
+    lastUpdated: number;
+}
+
 export class StateManager {
     private workspaceRoot: string;
     private parsers: {
@@ -14,10 +39,12 @@ export class StateManager {
         story: StoryParser;
     };
     private initInProgress: boolean = false;
+    private stateFilePath: string;
 
     constructor(workspaceRoot: string) {
         console.log('StateManager constructor, workspaceRoot:', workspaceRoot);
         this.workspaceRoot = workspaceRoot;
+        this.stateFilePath = path.join(workspaceRoot, '.claude-wm', 'state.json');
         this.parsers = {
             project: new ProjectParser(),
             epic: new EpicParser(),
@@ -338,5 +365,123 @@ export class StateManager {
             success: validation.valid, 
             validation 
         };
+    }
+
+    // ======================== STATE PERSISTENCE ========================
+
+    /**
+     * Load persisted state from .claude-wm/state.json
+     */
+    async loadPersistedState(): Promise<PersistedState | null> {
+        try {
+            if (!await this.fileExists(this.stateFilePath)) {
+                console.log('📁 No persisted state file found');
+                return null;
+            }
+
+            const content = await fs.promises.readFile(this.stateFilePath, 'utf8');
+            const state: PersistedState = JSON.parse(content);
+            
+            console.log('📤 Loaded persisted state:', {
+                isInitialized: state.isInitialized,
+                commandHistoryLength: state.commandHistory?.length || 0,
+                lastUpdated: new Date(state.lastUpdated).toISOString()
+            });
+            
+            return state;
+        } catch (error) {
+            console.error('❌ Error loading persisted state:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Save current state to .claude-wm/state.json
+     */
+    async savePersistedState(projectState: ProjectState, commandHistory: Array<{ command: string; timestamp: number; success: boolean; output?: string; duration?: number }> = []): Promise<void> {
+        try {
+            // Ensure .claude-wm directory exists
+            const stateDir = path.dirname(this.stateFilePath);
+            await fs.promises.mkdir(stateDir, { recursive: true });
+
+            const persistedState: PersistedState = {
+                isInitialized: projectState.initialized,
+                lastInitDate: projectState.initialized ? Date.now() : undefined,
+                commandHistory: commandHistory.slice(-50), // Keep last 50 commands
+                projectMetadata: {
+                    name: projectState.name,
+                    version: '1.0.0',
+                    description: 'Claude Workflow Manager Project'
+                },
+                settings: {
+                    autoSave: true,
+                    logRetentionDays: 30
+                },
+                lastUpdated: Date.now()
+            };
+
+            await fs.promises.writeFile(
+                this.stateFilePath, 
+                JSON.stringify(persistedState, null, 2), 
+                'utf8'
+            );
+
+            console.log('💾 State persisted successfully to:', this.stateFilePath);
+        } catch (error) {
+            console.error('❌ Error saving persisted state:', error);
+        }
+    }
+
+    /**
+     * Enhanced getProjectState that uses persisted state
+     */
+    async getProjectStateWithPersistence(): Promise<ProjectState> {
+        // Get current filesystem-based state
+        const currentState = await this.getProjectState();
+        
+        // Load persisted state for additional context
+        const persistedState = await this.loadPersistedState();
+        
+        if (persistedState) {
+            // Check if the filesystem state indicates initialization but persisted state doesn't
+            if (currentState.initialized && !persistedState.isInitialized) {
+                console.log('🔄 Detected new initialization, updating persisted state...');
+                persistedState.isInitialized = true;
+                persistedState.lastInitDate = Date.now();
+            }
+            
+            // Merge persisted metadata with current state
+            // Persist state takes precedence for initialization status if it's more recent
+            const enhancedState = {
+                ...currentState,
+                // Use the most accurate initialization state
+                initialized: persistedState.isInitialized || currentState.initialized,
+                lastInitDate: persistedState.lastInitDate,
+                commandHistory: persistedState.commandHistory
+            };
+            
+            // Auto-save updated state if there were changes
+            if (persistedState.isInitialized !== enhancedState.initialized) {
+                await this.savePersistedState(enhancedState);
+            }
+            
+            return enhancedState;
+        }
+        
+        return currentState;
+    }
+
+    /**
+     * Clear persisted state (useful for testing or reset)
+     */
+    async clearPersistedState(): Promise<void> {
+        try {
+            if (await this.fileExists(this.stateFilePath)) {
+                await fs.promises.unlink(this.stateFilePath);
+                console.log('🗑️ Persisted state cleared');
+            }
+        } catch (error) {
+            console.error('❌ Error clearing persisted state:', error);
+        }
     }
 }

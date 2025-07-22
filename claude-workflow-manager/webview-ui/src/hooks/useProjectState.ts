@@ -33,7 +33,10 @@ const initialProjectState: SerializableProjectState = {
     currentStory: null,
     epics: [],
     recentCommands: [],
-    lastUpdated: Date.now()
+    lastUpdated: Date.now(),
+    hasFeedback: false,
+    hasChallenge: false,
+    hasStatus: false
 };
 
 export function useProjectState(): ProjectStateHook {
@@ -199,9 +202,9 @@ export function useProjectData() {
         tickets: stats.totalTickets > 0 ? (stats.completedTickets / stats.totalTickets) * 100 : 0
     };
 
-    // Computed properties for button states
+    // Computed properties for button states (matching StateManager logic)
     const canImportFeedback = !initInProgress && projectState?.isInitialized;
-    const canPlanEpics = !initInProgress && projectState?.isInitialized && stats.totalEpics > 0;
+    const canPlanEpics = !initInProgress && projectState?.hasFeedback && projectState?.isInitialized;
 
     return {
         projectState,

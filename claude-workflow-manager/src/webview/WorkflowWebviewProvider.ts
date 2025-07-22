@@ -205,6 +205,10 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
                     output: result.output || 'Command completed successfully',
                     duration: Date.now() - (this.activeCommands.get(commandId)?.startTime || Date.now())
                 });
+
+                // After successful command execution, refresh project state 
+                // This is crucial for initialization and other state-changing commands
+                await this.refreshProjectStateAfterCommand(command);
             } else {
                 throw new Error(result.error || 'Command failed');
             }
@@ -220,7 +224,7 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     private async handleGetProjectState(_message: { id: string }): Promise<void> {
         try {
-            const projectState = await this.stateManager.getProjectState();
+            const projectState = await this.stateManager.getProjectStateWithPersistence();
             const serializableState = this.convertToSerializableState(projectState);
             this.sendProjectStateUpdate(serializableState);
         } catch (error) {
@@ -349,7 +353,7 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
         if (!this.webviewView) return;
 
         try {
-            const projectState = await this.stateManager.getProjectState();
+            const projectState = await this.stateManager.getProjectStateWithPersistence();
             const serializableState = this.convertToSerializableState(projectState);
             this.sendProjectStateUpdate(serializableState);
 
@@ -447,7 +451,11 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
                 tags: []
             })),
             recentCommands: [],
-            lastUpdated: Date.now()
+            lastUpdated: Date.now(),
+            // Additional state from ProjectState for button logic
+            hasFeedback: projectState.hasFeedback || false,
+            hasChallenge: projectState.hasChallenge || false,
+            hasStatus: projectState.hasStatus || false
         };
     }
 
@@ -539,6 +547,53 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
     <script type="module" src="${scriptUri}"></script>
 </body>
 </html>`;
+    }
+
+    /**
+     * Refresh project state after command execution
+     * This ensures the webview reflects any changes made by commands like initialization
+     */
+    private async refreshProjectStateAfterCommand(command: string): Promise<void> {
+        try {
+            // Commands that may change project state
+            const stateChangingCommands = [
+                'Init-Project',
+                'Import-FEEDBACK.md', 
+                'Plan-Epics',
+                '/1-project:1-start:1-Init-Project',
+                '/project:agile:start',
+                '/project:agile:design',
+                '/project:agile:plan',
+                '/project:agile:iterate',
+                '/project:agile:ship'
+            ];
+
+            // Check if this command might have changed the project state
+            const shouldRefresh = stateChangingCommands.some(stateCmd => 
+                command.includes(stateCmd) || stateCmd.includes(command)
+            );
+
+            if (shouldRefresh) {
+                console.log(`🔄 Refreshing project state after command: ${command}`);
+                
+                // Add a small delay to ensure file system operations are complete
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Get updated project state with persistence
+                const projectState = await this.stateManager.getProjectStateWithPersistence();
+                const serializableState = this.convertToSerializableState(projectState);
+                
+                // Save state persistence after successful commands
+                await this.stateManager.savePersistedState(projectState);
+                
+                // Send updated state to webview
+                this.sendProjectStateUpdate(serializableState);
+                
+                console.log(`✅ Project state refreshed. Initialized: ${serializableState.isInitialized}`);
+            }
+        } catch (error) {
+            console.error('Error refreshing project state after command:', error);
+        }
     }
 
     public dispose(): void {

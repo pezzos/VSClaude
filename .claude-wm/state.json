@@ -1,0 +1,14 @@
+{
+  "isInitialized": false,
+  "commandHistory": [],
+  "projectMetadata": {
+    "name": "VSClaude",
+    "version": "1.0.0",
+    "description": "Claude Workflow Manager Project"
+  },
+  "settings": {
+    "autoSave": true,
+    "logRetentionDays": 30
+  },
+  "lastUpdated": 1753196645133
+}
