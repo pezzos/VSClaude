@@ -1,0 +1,153 @@
+{
+  "name": "claude-workflow-manager",
+  "displayName": "Claude Workflow Manager",
+  "description": "Visual interface for managing Claude Code workflows with interactive tree view",
+  "version": "0.1.1",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:claudeWorkflow"
+  ],
+  "publisher": "local-dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/local-dev/claude-workflow-manager.git"
+  },
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "claudeWorkflow",
+          "name": "Claude Workflow",
+          "when": "workspaceFolder"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "claudeWorkflow.initProject",
+        "title": "Initialize Project",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "claudeWorkflow.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "claudeWorkflow.executeCommand",
+        "title": "Execute Command"
+      },
+      {
+        "command": "claudeWorkflow.selectEpic",
+        "title": "Select Epic",
+        "icon": "$(target)"
+      },
+      {
+        "command": "claudeWorkflow.startStory",
+        "title": "Start Story",
+        "icon": "$(play)"
+      },
+      {
+        "command": "claudeWorkflow.completeItem",
+        "title": "Complete",
+        "icon": "$(check)"
+      },
+      {
+        "command": "claudeWorkflow.planEpics",
+        "title": "Plan Epics",
+        "icon": "$(add)"
+      },
+      {
+        "command": "claudeWorkflow.planStories",
+        "title": "Plan Stories",
+        "icon": "$(add)"
+      },
+      {
+        "command": "claudeWorkflow.openFile",
+        "title": "Open File",
+        "icon": "$(go-to-file)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "claudeWorkflow.refresh",
+          "when": "view == claudeWorkflow",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "claudeWorkflow.selectEpic",
+          "when": "view == claudeWorkflow && viewItem == epic",
+          "group": "inline"
+        },
+        {
+          "command": "claudeWorkflow.startStory",
+          "when": "view == claudeWorkflow && viewItem == story",
+          "group": "inline"
+        },
+        {
+          "command": "claudeWorkflow.completeItem",
+          "when": "view == claudeWorkflow && viewItem =~ /^(story|ticket)$/",
+          "group": "inline"
+        },
+        {
+          "command": "claudeWorkflow.openFile",
+          "when": "view == claudeWorkflow && viewItem =~ /^(project|epic|story)$/",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "Claude Workflow",
+      "properties": {
+        "claudeWorkflowManager.autoRefresh": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh the tree when files change"
+        },
+        "claudeWorkflowManager.commandTimeout": {
+          "type": "number",
+          "default": 60,
+          "description": "Timeout for Claude commands in seconds"
+        },
+        "claudeWorkflowManager.showCompletedItems": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show completed epics, stories, and tickets in the tree"
+        },
+        "claudeWorkflowManager.githubConfigRepo": {
+          "type": "string",
+          "description": "GitHub repository for Claude configuration (user/repo format)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.31.0",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.60.0",
+    "@typescript-eslint/eslint-plugin": "^5.31.0",
+    "@typescript-eslint/parser": "^5.31.0",
+    "eslint": "^8.57.1",
+    "globals": "^16.3.0",
+    "typescript": "^4.7.4",
+    "typescript-eslint": "^8.38.0"
+  }
+}
