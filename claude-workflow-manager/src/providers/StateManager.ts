@@ -141,7 +141,10 @@ export class StateManager {
         const shouldParseEpics = state.initialized || commandState?.hasExecutedPlanEpics;
         
         if (shouldParseEpics) {
-            this.log('🔍 Parsing epics - initialized:', state.initialized, 'hasExecutedPlanEpics:', commandState?.hasExecutedPlanEpics);
+            this.log('🔍 Parsing epics', { 
+                initialized: state.initialized, 
+                hasExecutedPlanEpics: commandState?.hasExecutedPlanEpics 
+            });
             
             // Load epics from appropriate source
             const hasLegacyStructure = await this.fileExists(legacyEpicsPath);

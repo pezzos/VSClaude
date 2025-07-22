@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { isBrowserDev, getEnvironmentInfo } from '../utils/environment';
+import { useState } from 'react';
+import { isBrowserDev } from '../utils/environment';
 import { useProjectData as useRealProjectData } from './useProjectState';
 import { 
     createFakeProjectState, 
