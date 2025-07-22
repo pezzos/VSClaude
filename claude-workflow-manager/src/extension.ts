@@ -247,13 +247,13 @@ export function activate(context: vscode.ExtensionContext) {
     console.log('💬 SHOWING WELCOME MESSAGE');
     if (vscode.workspace.getConfiguration('claudeWorkflowManager').get('showWelcome', true)) {
         vscode.window.showInformationMessage(
-            '🎉 Claude Workflow Manager is now ACTIVE! Check the Explorer panel for the workflow tree.',
-            'Open Explorer', 'Don\'t show again'
+            '🎉 Claude Workflow Manager is now ACTIVE! Find it in the Activity Bar on the left.',
+            'Open Claude Workflow', 'Don\'t show again'
         ).then(selection => {
             if (selection === 'Don\'t show again') {
                 vscode.workspace.getConfiguration('claudeWorkflowManager').update('showWelcome', false, vscode.ConfigurationTarget.Global);
-            } else if (selection === 'Open Explorer') {
-                vscode.commands.executeCommand('workbench.view.explorer');
+            } else if (selection === 'Open Claude Workflow') {
+                vscode.commands.executeCommand('claudeWorkflow.focus');
             }
         });
     }

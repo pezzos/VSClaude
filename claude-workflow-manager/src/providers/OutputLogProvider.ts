@@ -7,6 +7,7 @@ export class OutputLogProvider implements vscode.TreeDataProvider<OutputLogItem>
 
     private outputLogs: OutputLogItem[] = [];
     private maxLogEntries = 20; // Keep last 20 command executions
+    private refreshTimeouts = new Map<string, NodeJS.Timeout>(); // Throttling for real-time updates
 
     constructor() {
         console.log('🔧 OutputLogProvider CONSTRUCTOR');
@@ -19,6 +20,13 @@ export class OutputLogProvider implements vscode.TreeDataProvider<OutputLogItem>
 
     clear(): void {
         console.log('🗑️ CLEAR OUTPUT LOG PANEL');
+        
+        // Clear all pending refresh timeouts
+        for (const [, timeout] of this.refreshTimeouts) {
+            clearTimeout(timeout);
+        }
+        this.refreshTimeouts.clear();
+        
         this.outputLogs = [];
         this.refresh();
     }
@@ -58,6 +66,12 @@ export class OutputLogProvider implements vscode.TreeDataProvider<OutputLogItem>
 
         Object.assign(logItem, updates);
 
+        // Clear any pending refresh timeout for this command since we're doing a final update
+        if (this.refreshTimeouts.has(id)) {
+            clearTimeout(this.refreshTimeouts.get(id)!);
+            this.refreshTimeouts.delete(id);
+        }
+
         // Update visual representation based on status
         if (logItem.status === 'completed') {
             logItem.label = `✅ ${logItem.commandText}`;
@@ -94,12 +108,24 @@ export class OutputLogProvider implements vscode.TreeDataProvider<OutputLogItem>
 
         if (isError) {
             logItem.stderr += output;
+            console.log(`❌ STDERR for ${id}: ${output.trim()}`);
         } else {
             logItem.stdout += output;
+            console.log(`📤 STDOUT for ${id}: ${output.trim()}`);
         }
 
-        // Don't refresh on every output append to avoid performance issues
-        // Only refresh when command status changes
+        // Throttled refresh for real-time streaming - max 1 refresh per 200ms per command
+        if (this.refreshTimeouts.has(id)) {
+            clearTimeout(this.refreshTimeouts.get(id)!);
+        }
+        
+        const timeout = setTimeout(() => {
+            console.log(`🔄 Refreshing UI for command ${id} due to new output`);
+            this.refresh();
+            this.refreshTimeouts.delete(id);
+        }, 200); // 200ms throttle
+        
+        this.refreshTimeouts.set(id, timeout);
     }
 
     getTreeItem(element: OutputLogItem): vscode.TreeItem {

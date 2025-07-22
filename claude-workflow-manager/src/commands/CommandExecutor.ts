@@ -10,6 +10,43 @@ export class CommandExecutor {
         this.outputLogProvider = provider;
     }
 
+    private getTimeoutForCommand(command: string): number {
+        console.log(`🕒 Determining timeout for command: ${command}`);
+        
+        // Commands that require very long timeouts (10 minutes)
+        const longCommands = [
+            'Init-Project',
+            'Plan-Epics', 
+            'Plan-stories',
+            'Implement',
+            'Plan-Ticket'
+        ];
+        
+        // Commands that require medium timeouts (5 minutes)
+        const mediumCommands = [
+            'Select-Stories',
+            'Start-Story',
+            'Complete-Story',
+            'Complete-Epic',
+            'Test-design',
+            'Validate-Ticket',
+            'Review-Ticket'
+        ];
+        
+        if (longCommands.some(cmd => command.includes(cmd))) {
+            console.log(`⏱️ Using LONG timeout (10 minutes) for: ${command}`);
+            return 600000; // 10 minutes
+        }
+        
+        if (mediumCommands.some(cmd => command.includes(cmd))) {
+            console.log(`⏱️ Using MEDIUM timeout (5 minutes) for: ${command}`);
+            return 300000; // 5 minutes
+        }
+        
+        console.log(`⏱️ Using DEFAULT timeout (3 minutes) for: ${command}`);
+        return 180000; // 3 minutes (increased from 60s default)
+    }
+
     async executeCommand(command: string, showProgress: boolean = true): Promise<boolean> {
         try {
             const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -51,18 +88,36 @@ export class CommandExecutor {
     ): Promise<boolean> {
         return new Promise<boolean>((resolve) => {
             const fullCommand = `claude -p "${command}"`;
+            const commandTimeout = this.getTimeoutForCommand(command);
+            const timeoutSeconds = Math.round(commandTimeout / 1000);
+            
             console.log(`🚀 Executing command: ${fullCommand}`);
             console.log(`📁 Working directory: ${workspaceRoot}`);
+            console.log(`⏰ Timeout set to: ${timeoutSeconds} seconds`);
 
-            // Spawn child process with captured stdio
+            // Spawn child process with captured stdio and anti-buffering environment
             const child = cp.spawn('claude', ['-p', command], {
                 cwd: workspaceRoot,
                 stdio: ['ignore', 'pipe', 'pipe'], // stdin ignored, stdout and stderr captured
-                shell: true
+                shell: true,
+                env: {
+                    ...process.env,
+                    PYTHONUNBUFFERED: '1',        // Disable Python buffering
+                    NODE_NO_READLINE: '1',        // Disable Node.js readline buffering
+                    FORCE_COLOR: '0',             // Disable ANSI colors
+                    NO_COLOR: '1',                // Another way to disable colors
+                    TERM: 'dumb'                  // Simple terminal to avoid formatting
+                }
             });
+
+            // Disable buffering on streams and set encoding
+            child.stdout?.setEncoding('utf8');
+            child.stderr?.setEncoding('utf8');
 
             let stdout = '';
             let stderr = '';
+
+            console.log(`🔢 Process PID: ${child.pid}`);
 
             // Capture stdout
             child.stdout?.on('data', (data: Buffer) => {
@@ -140,24 +195,21 @@ export class CommandExecutor {
                 resolve(false);
             });
 
-            // Set timeout
-            const timeout = vscode.workspace.getConfiguration('claudeWorkflowManager')
-                .get<number>('commandTimeout', 60) * 1000;
-            
+            // Set dynamic timeout based on command type (already calculated above)
             const timeoutHandle = setTimeout(() => {
-                console.log(`⏰ Command timeout after ${timeout}ms`);
+                console.log(`⏰ Command timeout after ${timeoutSeconds} seconds (${commandTimeout}ms) - killing PID ${child.pid}`);
                 child.kill('SIGTERM');
                 
                 if (logId && this.outputLogProvider) {
                     this.outputLogProvider.updateCommand(logId, {
                         status: 'failed',
                         endTime: new Date(),
-                        stderr: stderr + '\nCommand timed out'
+                        stderr: stderr + `\nCommand timed out after ${timeoutSeconds} seconds`
                     });
                 }
                 
                 resolve(false);
-            }, timeout);
+            }, commandTimeout);
 
             // Clear timeout when process completes
             child.on('close', () => {
