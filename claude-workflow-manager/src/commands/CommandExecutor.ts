@@ -128,7 +128,9 @@ export class CommandExecutor {
         cancellationToken?: vscode.CancellationToken
     ): Promise<boolean> {
         return new Promise<boolean>((resolve) => {
-            const fullCommand = `claude -p "${command}"`;
+            // Use correct Claude Code flags for streaming logs
+            const args = ['--verbose', '--output-format', 'stream-json', command];
+            const fullCommand = `claude ${args.join(' ')}`;
             const commandTimeout = this.getTimeoutForCommand(command);
             const timeoutSeconds = Math.round(commandTimeout / 1000);
             
@@ -141,10 +143,11 @@ export class CommandExecutor {
             this.outputChannel.appendLine(`🚀 Starting: ${command}`);
             this.outputChannel.appendLine(`📁 Working in: ${workspaceRoot}`);
             this.outputChannel.appendLine(`⏰ Timeout: ${timeoutSeconds}s`);
+            this.outputChannel.appendLine(`🔧 Using streaming logs with --verbose --output-format stream-json`);
             this.outputChannel.appendLine('─'.repeat(50));
 
-            // Spawn child process with captured stdio and anti-buffering environment
-            const child = cp.spawn('claude', ['-p', command], {
+            // Spawn child process with streaming flags for real-time logs
+            const child = cp.spawn('claude', args, {
                 cwd: workspaceRoot,
                 stdio: ['ignore', 'pipe', 'pipe'], // stdin ignored, stdout and stderr captured
                 shell: true,
@@ -173,17 +176,18 @@ export class CommandExecutor {
 
             console.log(`🔢 Process PID: ${child.pid}`);
 
-            // Capture stdout with real-time OutputChannel logging
+            // Capture stdout with stream-json parsing for real-time logs
             child.stdout?.on('data', (data: Buffer) => {
                 const output = data.toString();
                 stdout += output;
                 console.log(`📤 STDOUT: ${output}`);
                 
-                // Real-time logging to VSCode OutputChannel
-                this.outputChannel.append(output);
+                // Parse stream-json format and display formatted logs
+                const formattedOutput = this.parseStreamJsonOutput(output);
+                this.outputChannel.append(formattedOutput);
                 
                 if (logId && this.outputLogProvider) {
-                    this.outputLogProvider.appendOutput(logId, output, false);
+                    this.outputLogProvider.appendOutput(logId, formattedOutput, false);
                 }
             });
 
@@ -280,6 +284,76 @@ export class CommandExecutor {
 
     async executeClaudeCommand(claudeCommand: ClaudeCommand): Promise<boolean> {
         return this.executeCommand(claudeCommand.command);
+    }
+
+    /**
+     * Parse stream-json output from Claude Code and format for display
+     */
+    private parseStreamJsonOutput(rawOutput: string): string {
+        const lines = rawOutput.trim().split('\n');
+        let formattedOutput = '';
+
+        for (const line of lines) {
+            if (!line.trim()) continue;
+
+            try {
+                // Try to parse as JSON
+                const jsonData = JSON.parse(line);
+                
+                // Handle different types of stream events
+                if (jsonData.type === 'log') {
+                    const timestamp = new Date(jsonData.timestamp || Date.now()).toLocaleTimeString();
+                    const level = jsonData.level || 'info';
+                    const message = jsonData.message || '';
+                    const levelIcon = this.getLevelIcon(level);
+                    formattedOutput += `[${timestamp}] ${levelIcon} ${message}\n`;
+                } else if (jsonData.type === 'progress') {
+                    const step = jsonData.step || '';
+                    const progress = jsonData.progress || 0;
+                    formattedOutput += `⏳ [${progress}%] ${step}\n`;
+                } else if (jsonData.type === 'thinking') {
+                    const thought = jsonData.content || '';
+                    formattedOutput += `💭 ${thought}\n`;
+                } else if (jsonData.type === 'tool_call') {
+                    const tool = jsonData.tool || '';
+                    const args = jsonData.args ? JSON.stringify(jsonData.args) : '';
+                    formattedOutput += `🔧 Calling tool: ${tool} ${args}\n`;
+                } else if (jsonData.type === 'tool_result') {
+                    const tool = jsonData.tool || '';
+                    const success = jsonData.success ? '✅' : '❌';
+                    formattedOutput += `${success} Tool result: ${tool}\n`;
+                } else if (jsonData.type === 'response') {
+                    const content = jsonData.content || '';
+                    if (content) {
+                        formattedOutput += `📝 ${content}\n`;
+                    }
+                } else {
+                    // Unknown JSON format, display as is but formatted
+                    formattedOutput += `📊 ${JSON.stringify(jsonData, null, 2)}\n`;
+                }
+            } catch {
+                // Not JSON, display as plain text
+                if (line.trim()) {
+                    formattedOutput += `📋 ${line}\n`;
+                }
+            }
+        }
+
+        return formattedOutput;
+    }
+
+    /**
+     * Get icon for log level
+     */
+    private getLevelIcon(level: string): string {
+        switch (level.toLowerCase()) {
+            case 'error': return '❌';
+            case 'warn': case 'warning': return '⚠️';
+            case 'info': return 'ℹ️';
+            case 'debug': return '🔍';
+            case 'success': return '✅';
+            default: return '📋';
+        }
     }
 
     dispose(): void {
