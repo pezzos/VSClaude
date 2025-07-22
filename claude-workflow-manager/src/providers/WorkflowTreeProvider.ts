@@ -344,11 +344,11 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
         // Show existing epics
         for (const epic of this.projectState.epics) {
             const isActive = this.projectState.currentEpic?.id === epic.id;
-            const statusIcon = epic.status === 'completed' ? '✅' : (isActive ? '🔵' : '⚪');
+            const statusIcon = epic.status === 'done' ? '✅' : (isActive ? '🔵' : '⚪');
             
             const epicItem: WorkflowTreeItem = {
                 label: `${statusIcon} Epic #${epic.id}: ${epic.title}${isActive ? ' (current)' : ''}`,
-                collapsibleState: isActive && epic.stories.length > 0 ? 
+                collapsibleState: isActive && epic.userStories.length > 0 ? 
                     vscode.TreeItemCollapsibleState.Expanded : 
                     vscode.TreeItemCollapsibleState.Collapsed,
                 itemType: 'epic',
@@ -420,9 +420,9 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
             items.push(manageItem);
 
             // Show stories collection
-            if (epic.stories.length > 0) {
+            if (epic.userStories.length > 0) {
                 const storiesItem: WorkflowTreeItem = {
-                    label: `📝 Stories (${epic.stories.length})`,
+                    label: `📝 Stories (${epic.userStories.length})`,
                     collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
                     itemType: 'collection',
                     contextValue: 'stories',
@@ -464,9 +464,9 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
     private getStoryItems(epic: Epic): WorkflowTreeItem[] {
         const priorityIcons = { P0: '🔴', P1: '🟠', P2: '🟡', P3: '⚫' };
         
-        return epic.stories.map(story => {
+        return epic.userStories.map((story: any) => {
             const isActive = this.projectState?.currentStory?.id === story.id;
-            const priorityIcon = priorityIcons[story.priority];
+            const priorityIcon = priorityIcons[story.priority as keyof typeof priorityIcons] || '⚫';
             const statusIcon = story.status === 'completed' ? '✅' : (isActive ? '🔵' : '⚪');
             
             return {

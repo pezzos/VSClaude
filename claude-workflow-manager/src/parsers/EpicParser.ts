@@ -5,7 +5,7 @@ export class EpicParser {
         try {
             const lines = content.split('\n');
             const epic: Partial<Epic> = {
-                stories: []
+                userStories: []
             };
 
             for (const line of lines) {
@@ -38,8 +38,10 @@ export class EpicParser {
                 };
             }
 
-            // Default to active since this is the current epic
-            epic.status = 'active';
+            // Default to in_progress since this is the current epic  
+            epic.status = 'in_progress';
+            epic.priority = 'medium';
+            epic.dependencies = [];
 
             return {
                 success: true,

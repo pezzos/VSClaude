@@ -28,10 +28,37 @@ export interface ProjectState {
 export interface Epic {
     id: string;
     title: string;
-    status: 'planned' | 'active' | 'completed';
+    priority: 'low' | 'medium' | 'high';
+    status: 'backlog' | 'todo' | 'in_progress' | 'done';
+    dependencies: string[];
     description?: string;
-    stories: Story[];
+    userStories: UserStory[];
     filePath?: string;
+}
+
+export interface EpicsCache {
+    epics: Epic[];
+    metadata: {
+        version: string;
+        lastUpdated: string;
+        totalEpics: number;
+        totalUserStories: number;
+        statusSummary: {
+            backlog: number;
+            todo: number;
+            in_progress: number;
+            done: number;
+        };
+    };
+}
+
+export interface UserStory {
+    id: string;
+    title: string;
+    description: string;
+    status: 'todo' | 'in_progress' | 'done';
+    priority: 'low' | 'medium' | 'high';
+    acceptanceCriteria: string[];
 }
 
 export interface Story {

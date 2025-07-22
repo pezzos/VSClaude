@@ -23,8 +23,8 @@ export class ProjectParser {
                         currentEpic = {
                             id: match[1],
                             title: match[2].trim(),
-                            status: this.parseStatus(match[3]),
-                            stories: []
+                            status: this.parseStatus(match[3]) as any, // Legacy status conversion
+                            userStories: []
                         };
                         inEpicSection = true;
                     }

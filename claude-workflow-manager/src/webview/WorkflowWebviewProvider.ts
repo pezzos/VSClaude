@@ -393,12 +393,12 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
                 name: projectState.currentEpic.title,
                 description: projectState.currentEpic.description || '',
                 status: this.mapEpicStatus(projectState.currentEpic.status),
-                stories: projectState.currentEpic.stories.map(story => ({
+                stories: projectState.currentEpic.userStories.map((story: any) => ({
                     id: story.id,
                     name: story.title,
                     description: story.description || '',
                     status: this.mapStoryStatus(story.status),
-                    tickets: story.tickets.map(ticket => ({
+                    tickets: (story as any).tickets?.map((ticket: any) => ({
                         id: ticket.id,
                         name: ticket.title,
                         description: ticket.description || '',
@@ -443,12 +443,12 @@ export class WorkflowWebviewProvider implements vscode.WebviewViewProvider {
                 name: epic.title,
                 description: epic.description || '',
                 status: this.mapEpicStatus(epic.status),
-                stories: epic.stories.map(story => ({
+                stories: epic.userStories.map(story => ({
                     id: story.id,
                     name: story.title,
                     description: story.description || '',
                     status: this.mapStoryStatus(story.status),
-                    tickets: story.tickets.map(ticket => ({
+                    tickets: (story as any).tickets?.map((ticket: any) => ({
                         id: ticket.id,
                         name: ticket.title,
                         description: ticket.description || '',

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ProjectState, Epic, Story } from '../types';
+import { ProjectState, Epic, Story, EpicsCache } from '../types';
 import { ProjectParser } from '../parsers/ProjectParser';
 import { EpicParser } from '../parsers/EpicParser';
 import { StoryParser } from '../parsers/StoryParser';
@@ -43,6 +43,7 @@ export class StateManager {
     };
     private initInProgress: boolean = false;
     private stateFilePath: string;
+    private epicsCacheFilePath: string;
     private outputChannel: vscode.OutputChannel;
 
     constructor(workspaceRoot: string) {
@@ -50,6 +51,7 @@ export class StateManager {
         this.log('StateManager constructor, workspaceRoot:', workspaceRoot);
         this.workspaceRoot = workspaceRoot;
         this.stateFilePath = path.join(workspaceRoot, '.claude-wm', 'state.json');
+        this.epicsCacheFilePath = path.join(workspaceRoot, '.claude-wm', 'epics.json');
         this.parsers = {
             project: new ProjectParser(),
             epic: new EpicParser(),
@@ -68,6 +70,173 @@ export class StateManager {
             : `[${timestamp}] ${prefix} ${message}`;
         
         this.outputChannel.appendLine(formattedMessage);
+    }
+
+    // ======================== EPICS CACHE MANAGEMENT ========================
+
+    /**
+     * Load epics from cache file (.claude-wm/epics.json) or directly from epics.json
+     */
+    private async loadEpicsFromCache(): Promise<Epic[]> {
+        try {
+            // Try to load from main epics.json first
+            const mainEpicsPath = path.join(this.workspaceRoot, 'docs/1-project/epics.json');
+            if (await this.fileExists(mainEpicsPath)) {
+                const content = await fs.promises.readFile(mainEpicsPath, 'utf8');
+                const epicData: EpicsCache = JSON.parse(content);
+                
+                this.log('📤 Loaded epics from main epics.json:', {
+                    version: epicData.metadata.version,
+                    epicCount: epicData.epics?.length || 0,
+                    lastUpdated: epicData.metadata.lastUpdated,
+                    totalUserStories: epicData.metadata.totalUserStories
+                });
+                
+                return epicData.epics || [];
+            }
+
+            // Fallback to cache file
+            if (!await this.fileExists(this.epicsCacheFilePath)) {
+                this.log('📁 No epics files found (neither main nor cache)');
+                return [];
+            }
+
+            const content = await fs.promises.readFile(this.epicsCacheFilePath, 'utf8');
+            const cache: EpicsCache = JSON.parse(content);
+            
+            this.log('📤 Loaded epics from legacy cache:', {
+                version: cache.metadata.version,
+                epicCount: cache.epics?.length || 0,
+                lastUpdated: cache.metadata.lastUpdated
+            });
+            
+            return cache.epics || [];
+        } catch (error) {
+            this.log('❌ Error loading epics:', error, 'error');
+            return [];
+        }
+    }
+
+    /**
+     * Save epics to cache file (.claude-wm/epics.json) - deprecated, kept for compatibility
+     */
+    private async saveEpicsToCache(epics: Epic[], parsedFrom: string = 'epics.json'): Promise<void> {
+        try {
+            // Ensure .claude-wm directory exists
+            const cacheDir = path.dirname(this.epicsCacheFilePath);
+            await fs.promises.mkdir(cacheDir, { recursive: true });
+
+            const cache: EpicsCache = {
+                epics: epics,
+                metadata: {
+                    version: '2.0',
+                    lastUpdated: new Date().toISOString(),
+                    totalEpics: epics.length,
+                    totalUserStories: epics.reduce((sum, epic) => sum + epic.userStories.length, 0),
+                    statusSummary: {
+                        backlog: epics.filter(e => e.status === 'backlog').length,
+                        todo: epics.filter(e => e.status === 'todo').length,
+                        in_progress: epics.filter(e => e.status === 'in_progress').length,
+                        done: epics.filter(e => e.status === 'done').length
+                    }
+                }
+            };
+
+            await fs.promises.writeFile(
+                this.epicsCacheFilePath, 
+                JSON.stringify(cache, null, 2), 
+                'utf8'
+            );
+
+            this.log('💾 Epics saved to legacy cache:', {
+                epicCount: epics.length,
+                parsedFrom: parsedFrom,
+                cacheFile: this.epicsCacheFilePath
+            });
+        } catch (error) {
+            this.log('❌ Error saving epics cache:', error, 'error');
+        }
+    }
+
+    /**
+     * Parse epics.json directly (NEW: for JSON-based workflow)
+     */
+    async parseAndCacheEpics(): Promise<Epic[]> {
+        this.log('🔍 Loading epics from JSON...');
+        
+        const epicsJsonPath = path.join(this.workspaceRoot, 'docs/1-project/epics.json');
+        if (await this.fileExists(epicsJsonPath)) {
+            this.log('📋 Found epics.json, loading directly...');
+            return await this.loadEpicsFromCache(); // This now handles epics.json
+        }
+
+        // Fallback: try to parse legacy EPICS.md if epics.json doesn't exist
+        const epicsPath = path.join(this.workspaceRoot, 'docs/1-project/EPICS.md');
+        if (!await this.fileExists(epicsPath)) {
+            this.log('⚠️ Neither epics.json nor EPICS.md found', undefined, 'warn');
+            return [];
+        }
+
+        this.log('📄 Falling back to parsing legacy EPICS.md...');
+        try {
+            const content = await fs.promises.readFile(epicsPath, 'utf8');
+            const parseResult = this.parsers.project.parseEpics(content);
+            const epics = parseResult.success ? parseResult.data! : [];
+
+            // Convert legacy Epic format to new format if needed
+            const convertedEpics = epics.map(epic => ({
+                ...epic,
+                priority: (epic as any).priority || 'medium' as const,
+                dependencies: [],
+                userStories: (epic as any).stories?.map((story: any) => ({
+                    id: story.id,
+                    title: story.title,
+                    description: story.description || '',
+                    status: story.status === 'active' ? 'in_progress' as const : 
+                           story.status === 'completed' ? 'done' as const : 'todo' as const,
+                    priority: story.priority === 'P0' ? 'high' as const : 
+                             story.priority === 'P1' ? 'high' as const :
+                             story.priority === 'P2' ? 'medium' as const : 'low' as const,
+                    acceptanceCriteria: []
+                })) || []
+            }));
+
+            // Save to cache
+            await this.saveEpicsToCache(convertedEpics, 'EPICS.md');
+
+            this.log('✅ Converted and cached legacy epics:', { epicCount: convertedEpics.length });
+            return convertedEpics;
+        } catch (error) {
+            this.log('❌ Error parsing legacy epics:', error, 'error');
+            return [];
+        }
+    }
+
+    /**
+     * Determine if we should parse epics based on current state (updated for JSON workflow)
+     */
+    private shouldParseEpics(hasExecutedPlanEpics: boolean, epicsJsonExists: boolean, epicsInCache: number): boolean {
+        // Scénario 1: Pas d'epics.json ET hasExecutedPlanEpics false → ne rien faire
+        if (!epicsJsonExists && !hasExecutedPlanEpics) {
+            this.log('🚫 No epics.json and Plan Epics not executed - skipping parsing');
+            return false;
+        }
+
+        // Scénario 2: Pas d'epics.json ET hasExecutedPlanEpics true → chercher epics.json
+        if (!epicsJsonExists && hasExecutedPlanEpics) {
+            this.log('📋 No epics.json but Plan Epics executed - will try to load epics');
+            return true;
+        }
+
+        // Si epics.json existe, on le charge toujours (c'est le fichier principal maintenant)
+        if (epicsJsonExists) {
+            this.log('✅ epics.json exists - loading directly');
+            return true;
+        }
+
+        // Autres cas : utiliser le cache legacy
+        this.log('✅ Using legacy cache/fallback');
+        return false;
     }
 
     async getProjectState(): Promise<ProjectState> {
@@ -137,35 +306,36 @@ export class StateManager {
         // Check if commands have been executed early to influence epic parsing
         const commandState = await this.loadPersistedState();
         
-        // Parse epics if project is initialized OR if Plan Epics has been executed
-        const shouldParseEpics = state.initialized || commandState?.hasExecutedPlanEpics;
+        // NOUVELLE LOGIQUE JSON POUR EPICS
+        this.log('🔍 Determining epic loading strategy...');
         
-        if (shouldParseEpics) {
-            this.log('🔍 Parsing epics', { 
-                initialized: state.initialized, 
-                hasExecutedPlanEpics: commandState?.hasExecutedPlanEpics 
-            });
-            
-            // Load epics from appropriate source
-            const hasLegacyStructure = await this.fileExists(legacyEpicsPath);
-            if (hasLegacyStructure) {
-                this.log('📋 Loading epics from legacy EPICS.md');
-                state.epics = await this.loadEpics();
-            } else {
-                // For VSClaude, epics might be in different format/location
-                this.log('📋 Loading epics from VSClaude structure');
-                state.epics = await this.loadVSClaudeEpics();
-            }
-            
-            this.log('📊 Parsed epics count:', state.epics?.length || 0);
-            
-            state.currentEpic = await this.getCurrentEpic();
-            
-            if (state.currentEpic) {
-                state.currentStory = await this.getCurrentStory(state.currentEpic);
-            }
+        // Check if epics.json exists (main source now)
+        const epicsJsonPath = path.join(this.workspaceRoot, 'docs/1-project/epics.json');
+        const epicsJsonExists = await this.fileExists(epicsJsonPath);
+        const hasExecutedPlanEpics = commandState?.hasExecutedPlanEpics || false;
+        
+        // Load epics from JSON or fallback sources
+        const cachedEpics = await this.loadEpicsFromCache(); // This handles epics.json first, then fallback
+        
+        // Determine if we should parse/load epics
+        const shouldParse = this.shouldParseEpics(hasExecutedPlanEpics, epicsJsonExists, cachedEpics.length);
+        
+        if (shouldParse) {
+            // Load from JSON or parse legacy
+            state.epics = await this.parseAndCacheEpics();
         } else {
-            this.log('⚠️ Skipping epic parsing - project not initialized and Plan Epics not executed');
+            // Use already loaded epics
+            state.epics = cachedEpics;
+            this.log('📚 Using existing epics:', { epicCount: cachedEpics.length });
+        }
+        
+        this.log('📊 Final epics count:', state.epics?.length || 0);
+        
+        // Load current epic and story regardless of parsing method
+        state.currentEpic = await this.getCurrentEpic();
+        
+        if (state.currentEpic) {
+            state.currentStory = await this.getCurrentStory(state.currentEpic);
         }
 
         // Check update command availability
@@ -277,7 +447,7 @@ export class StateManager {
             const parseResult = this.parsers.epic.parseEpic(content);
             if (parseResult.success && parseResult.data) {
                 const epic = parseResult.data;
-                epic.stories = await this.loadStoriesForEpic(epic.id);
+                // epic.stories = await this.loadStoriesForEpic(epic.id); // Legacy field removed
                 return epic;
             }
         } catch (error) {
@@ -373,7 +543,7 @@ export class StateManager {
                 const parseResult = this.parsers.epic.parseEpic(content);
                 if (parseResult.success && parseResult.data) {
                     const epic = parseResult.data;
-                    epic.stories = await this.loadStoriesForEpic(epic.id);
+                    // epic.stories = await this.loadStoriesForEpic(epic.id); // Legacy field removed
                     epics.push(epic);
                 }
             } catch (error) {

@@ -219,6 +219,11 @@ export function activate(context: vscode.ExtensionContext) {
                 // Mark command as executed for state tracking
                 await stateManager.markCommandExecuted('/1-project:3-epics:1-Plan-Epics');
                 logExtension('✅ Plan Epics command marked as executed');
+                
+                // Force parsing and caching of the new EPICS.md
+                logExtension('🔄 Parsing and caching updated EPICS.md...');
+                await stateManager.parseAndCacheEpics();
+                logExtension('✅ EPICS.md parsed and cached successfully');
             }
             vscode.window.showInformationMessage('Epic planning started');
             logExtension('✅ Epic planning completed, scheduling refresh...');

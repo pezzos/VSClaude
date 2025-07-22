@@ -1,6 +1,6 @@
 {
   "isInitialized": true,
-  "lastInitDate": 1753214888144,
+  "lastInitDate": 1753221155387,
   "commandHistory": [],
   "projectMetadata": {
     "name": "VSClaude - Claude Workflow Manager",
@@ -13,5 +13,5 @@
   },
   "hasExecutedImportFeedback": true,
   "hasExecutedPlanEpics": true,
-  "lastUpdated": 1753214888144
+  "lastUpdated": 1753221155387
 }
