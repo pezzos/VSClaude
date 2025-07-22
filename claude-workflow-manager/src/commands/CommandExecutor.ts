@@ -10,7 +10,32 @@ export class CommandExecutor {
     constructor() {
         // Create dedicated OutputChannel for Claude Workflow Manager logs
         this.outputChannel = vscode.window.createOutputChannel('Claude Workflow Manager');
-        console.log('🔧 CommandExecutor: OutputChannel created for real-time logging');
+        this.log('🔧 CommandExecutor: OutputChannel created for real-time logging');
+    }
+
+    /**
+     * Central logging method that only writes to extension's OutputChannel
+     * Replaces console.log to avoid cluttering VSCode's Developer Console
+     */
+    private log(message: string, level: 'info' | 'warn' | 'error' = 'info'): void {
+        const timestamp = new Date().toLocaleTimeString();
+        const prefix = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : 'ℹ️';
+        const formattedMessage = `[${timestamp}] ${prefix} ${message}`;
+        
+        // Only write to extension's OutputChannel, not VSCode console
+        this.outputChannel.appendLine(formattedMessage);
+        
+        // Optionally add to log provider for persistent tracking
+        if (this.outputLogProvider) {
+            const logEntry: any = {
+                id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                timestamp: Date.now(),
+                level: level,
+                message: message,
+                source: 'CommandExecutor'
+            };
+            // Add to extension log panel if needed
+        }
     }
 
     setOutputLogProvider(provider: OutputLogProvider): void {
@@ -18,7 +43,7 @@ export class CommandExecutor {
     }
 
     private getTimeoutForCommand(command: string): number {
-        console.log(`🕒 Determining timeout for command: ${command}`);
+        this.log(`🕒 Determining timeout for command: ${command}`);
         
         // Commands that require very long timeouts (10 minutes)
         const longCommands = [
@@ -41,16 +66,16 @@ export class CommandExecutor {
         ];
         
         if (longCommands.some(cmd => command.includes(cmd))) {
-            console.log(`⏱️ Using LONG timeout (10 minutes) for: ${command}`);
+            this.log(`⏱️ Using LONG timeout (10 minutes) for: ${command}`);
             return 600000; // 10 minutes
         }
         
         if (mediumCommands.some(cmd => command.includes(cmd))) {
-            console.log(`⏱️ Using MEDIUM timeout (5 minutes) for: ${command}`);
+            this.log(`⏱️ Using MEDIUM timeout (5 minutes) for: ${command}`);
             return 300000; // 5 minutes
         }
         
-        console.log(`⏱️ Using DEFAULT timeout (3 minutes) for: ${command}`);
+        this.log(`⏱️ Using DEFAULT timeout (3 minutes) for: ${command}`);
         return 180000; // 3 minutes (increased from 60s default)
     }
 
@@ -87,8 +112,7 @@ export class CommandExecutor {
 
                 if (result) {
                     if (attempt > 1) {
-                        this.outputChannel.appendLine(`✅ Command succeeded on retry ${attempt - 1}`);
-                        console.log(`✅ Command succeeded on retry ${attempt - 1}`);
+                        this.log(`✅ Command succeeded on retry ${attempt - 1}`);
                     }
                     return true;
                 }
@@ -96,19 +120,17 @@ export class CommandExecutor {
                 // If command failed and we have retries left
                 if (attempt < maxRetries) {
                     const retryDelay = Math.min(2000 * attempt, 10000); // Progressive delay, max 10s
-                    this.outputChannel.appendLine(`⚠️ Command failed, retrying in ${retryDelay/1000}s... (Attempt ${attempt}/${maxRetries})`);
-                    console.log(`⚠️ Command failed, retrying in ${retryDelay/1000}s... (Attempt ${attempt}/${maxRetries})`);
+                    this.log(`⚠️ Command failed, retrying in ${retryDelay/1000}s... (Attempt ${attempt}/${maxRetries})`, 'warn');
                     await new Promise(resolve => setTimeout(resolve, retryDelay));
                 }
 
             } catch (error) {
                 lastError = error instanceof Error ? error : new Error(String(error));
-                this.outputChannel.appendLine(`❌ Error on attempt ${attempt}: ${lastError.message}`);
-                console.error(`❌ Error on attempt ${attempt}:`, lastError);
+                this.log(`❌ Error on attempt ${attempt}: ${lastError.message}`, 'error');
                 
                 if (attempt < maxRetries) {
                     const retryDelay = Math.min(2000 * attempt, 10000);
-                    this.outputChannel.appendLine(`🔄 Retrying in ${retryDelay/1000}s due to error...`);
+                    this.log(`🔄 Retrying in ${retryDelay/1000}s due to error...`, 'warn');
                     await new Promise(resolve => setTimeout(resolve, retryDelay));
                 }
             }
@@ -116,7 +138,7 @@ export class CommandExecutor {
 
         // All retries exhausted
         const message = lastError?.message || 'Command failed after all retries';
-        this.outputChannel.appendLine(`❌ Command failed after ${maxRetries} attempts: ${message}`);
+        this.log(`❌ Command failed after ${maxRetries} attempts: ${message}`, 'error');
         vscode.window.showErrorMessage(`Failed to execute command after ${maxRetries} attempts: ${message}`);
         return false;
     }
@@ -379,6 +401,6 @@ export class CommandExecutor {
     dispose(): void {
         // Clean up OutputChannel
         this.outputChannel.dispose();
-        console.log('🧹 CommandExecutor disposed');
+        this.log('🧹 CommandExecutor disposed');
     }
 }

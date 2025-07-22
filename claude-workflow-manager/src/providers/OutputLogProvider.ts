@@ -12,17 +12,14 @@ export class OutputLogProvider implements vscode.TreeDataProvider<OutputLogItem>
     private refreshTimeouts = new Map<string, NodeJS.Timeout>(); // Throttling for real-time updates
 
     constructor(private stateEventBus?: StateEventBus) {
-        console.log('🔧 OutputLogProvider CONSTRUCTOR');
+        // OutputLogProvider initialized - logs only go to extension's output panel
     }
 
     refresh(): void {
-        console.log('🔄 REFRESH OUTPUT LOG PANEL');
         this._onDidChangeTreeData.fire();
     }
 
     clear(): void {
-        console.log('🗑️ CLEAR OUTPUT LOG PANEL');
-        
         // Clear all pending refresh timeouts
         for (const [, timeout] of this.refreshTimeouts) {
             clearTimeout(timeout);

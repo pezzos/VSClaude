@@ -7,19 +7,34 @@ import { OutputLogProvider } from './providers/OutputLogProvider';
 import { CommandExecutor } from './commands/CommandExecutor';
 import { ClaudeCommand } from './types';
 
+// Create global OutputChannel for extension logs
+let extensionOutputChannel: vscode.OutputChannel;
+
+function logExtension(message: string, level: 'info' | 'warn' | 'error' = 'info'): void {
+    const timestamp = new Date().toLocaleTimeString();
+    const prefix = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : 'ℹ️';
+    const formattedMessage = `[${timestamp}] ${prefix} ${message}`;
+    
+    // Only write to extension's OutputChannel, not VSCode console
+    extensionOutputChannel.appendLine(formattedMessage);
+}
+
 export function activate(context: vscode.ExtensionContext) {
-    console.log('🚀 CLAUDE WORKFLOW MANAGER - ACTIVATION STARTED!');
-    console.log('📊 Extension Context:', {
+    // Initialize extension logging
+    extensionOutputChannel = vscode.window.createOutputChannel('Claude Workflow Manager - Extension');
+    
+    logExtension('🚀 CLAUDE WORKFLOW MANAGER - ACTIVATION STARTED!');
+    logExtension('📊 Extension Context: ' + JSON.stringify({
         subscriptions: context.subscriptions.length,
         extensionPath: context.extensionPath,
         workspaceState: !!context.workspaceState,
         globalState: !!context.globalState
-    });
+    }));
 
     // Get workspace folder
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (!workspaceFolder) {
-        console.log('No workspace folder found');
+        logExtension('No workspace folder found', 'warn');
         // Don't return early - still register the tree view so users can see the extension
         // vscode.window.showWarningMessage('Claude Workflow Manager requires an open workspace folder');
         // return;
@@ -47,16 +62,16 @@ export function activate(context: vscode.ExtensionContext) {
     commandExecutor.setOutputLogProvider(outputLogProvider);
 
     // Register tree view
-    console.log('🌳 REGISTERING TREE VIEW: claudeWorkflow');
+    logExtension('🌳 REGISTERING TREE VIEW: claudeWorkflow');
     const treeView = vscode.window.createTreeView('claudeWorkflow', {
         treeDataProvider: treeProvider,
         showCollapseAll: true,
         canSelectMany: false
     });
-    console.log('✅ TREE VIEW REGISTERED SUCCESSFULLY!');
+    logExtension('✅ TREE VIEW REGISTERED SUCCESSFULLY!');
 
     // Register webview provider
-    console.log('🖥️ REGISTERING WEBVIEW PROVIDER: claudeWorkflowWebview');
+    logExtension('🖥️ REGISTERING WEBVIEW PROVIDER: claudeWorkflowWebview');
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider('claudeWorkflowWebview', webviewProvider, {
             webviewOptions: {
@@ -64,21 +79,21 @@ export function activate(context: vscode.ExtensionContext) {
             }
         })
     );
-    console.log('✅ WEBVIEW PROVIDER REGISTERED SUCCESSFULLY!');
+    logExtension('✅ WEBVIEW PROVIDER REGISTERED SUCCESSFULLY!');
 
     // Register output log view
-    console.log('🔧 REGISTERING OUTPUT LOG VIEW: claudeOutput');
+    logExtension('🔧 REGISTERING OUTPUT LOG VIEW: claudeOutput');
     const outputView = vscode.window.createTreeView('claudeOutput', {
         treeDataProvider: outputLogProvider,
         showCollapseAll: true,
         canSelectMany: false
     });
-    console.log('✅ OUTPUT LOG VIEW REGISTERED SUCCESSFULLY!');
-    console.log('📋 Tree View Details:', {
+    logExtension('✅ OUTPUT LOG VIEW REGISTERED SUCCESSFULLY!');
+    logExtension('📋 Tree View Details: ' + JSON.stringify({
         title: treeView.title,
         visible: treeView.visible,
         selection: treeView.selection.length
-    });
+    }));
 
     // Register commands
     const commands = [
@@ -115,20 +130,20 @@ export function activate(context: vscode.ExtensionContext) {
             );
 
             if (result === 'Yes') {
-                console.log('🚀 STARTING PROJECT INITIALIZATION');
+                logExtension('🚀 STARTING PROJECT INITIALIZATION');
                 
                 // Execute initialization command
                 const success = await commandExecutor.executeCommand('/1-project:1-start:1-Init-Project');
                 
                 if (success) {
                     vscode.window.showInformationMessage('Project initialization started - waiting for completion...');
-                    console.log('✅ Project initialization command completed, starting intelligent polling...');
+                    logExtension('✅ Project initialization command completed, starting intelligent polling...');
                     
                     // Use intelligent polling with comprehensive validation
                     const result = await treeProvider.waitForInitializationWithValidation(300000); // 5 minutes timeout
                     
                     if (result.success) {
-                        console.log('🎉 Initialization completed with full validation! Refreshing tree...');
+                        logExtension('🎉 Initialization completed with full validation! Refreshing tree...');
                         treeProvider.refresh();
                         vscode.window.showInformationMessage('🎉 Project initialization completed successfully!');
                     } else {
