@@ -20,6 +20,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 }) => {
     const [autoScroll, setAutoScroll] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
     const logContainerRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -75,14 +76,89 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         }
     };
 
-    const getLogIcon = (level: string): string => {
-        switch (level.toLowerCase()) {
+    const getLogIcon = (log: SerializableLogEntry): string => {
+        // Detect message type from content for better icons
+        const message = log.message.toLowerCase();
+        if (message.includes('tool_use') || message.includes('calling tool')) return '🔧';
+        if (message.includes('tool_result')) return '✅';
+        if (message.includes('thinking') || message.includes('💭')) return '💭';
+        if (message.includes('response') || message.includes('📝')) return '📝';
+        if (message.includes('file') || message.includes('edit') || message.includes('write')) return '📄';
+        if (message.includes('error')) return '❌';
+        if (message.includes('warning') || message.includes('warn')) return '⚠️';
+        
+        // Fallback to level-based icons
+        switch (log.level.toLowerCase()) {
             case 'error': return '❌';
             case 'warning': case 'warn': return '⚠️';
             case 'info': return 'ℹ️';
             case 'debug': return '🔍';
             default: return '📋';
         }
+    };
+
+    const truncateMessage = (message: string, maxLines: number = 2): string => {
+        const lines = message.split('\n');
+        if (lines.length <= maxLines) return message;
+        return lines.slice(0, maxLines).join('\n') + '...';
+    };
+
+    const toggleLogExpansion = (logId: string) => {
+        setExpandedLogs(prev => {
+            const next = new Set(prev);
+            if (next.has(logId)) {
+                next.delete(logId);
+            } else {
+                next.add(logId);
+            }
+            return next;
+        });
+    };
+
+    const extractLogDetails = (log: SerializableLogEntry) => {
+        const details: Array<{label: string, value: string}> = [];
+        
+        // Try to parse JSON details if available
+        if (log.details && typeof log.details === 'object') {
+            const logDetails = log.details as any;
+            if (logDetails.model) details.push({label: 'Model', value: logDetails.model});
+            if (logDetails.file) details.push({label: 'File', value: logDetails.file});
+            if (logDetails.tool) details.push({label: 'Tool', value: logDetails.tool});
+            if (logDetails.duration) details.push({label: 'Duration', value: `${logDetails.duration}ms`});
+        }
+
+        // Extract details from message content
+        const message = log.message;
+        
+        // Look for model mentions
+        const modelMatch = message.match(/model[:\s]+([^\s,]+)/i);
+        if (modelMatch && !details.some(d => d.label === 'Model')) {
+            details.push({label: 'Model', value: modelMatch[1]});
+        }
+        
+        // Look for file mentions
+        const fileMatch = message.match(/file[:\s]+([^\s,]+\.[a-zA-Z]{1,4})/i);
+        if (fileMatch && !details.some(d => d.label === 'File')) {
+            details.push({label: 'File', value: fileMatch[1]});
+        }
+
+        // Look for tool mentions
+        const toolMatch = message.match(/tool[:\s]+([^\s,]+)/i);
+        if (toolMatch && !details.some(d => d.label === 'Tool')) {
+            details.push({label: 'Tool', value: toolMatch[1]});
+        }
+
+        // Add source if available
+        if (log.source) {
+            details.push({label: 'Source', value: log.source});
+        }
+
+        // Add command ID if available
+        if (log.commandId) {
+            details.push({label: 'Command', value: log.commandId});
+        }
+
+        return details;
     };
 
     const formatTimestamp = (timestamp: number): string => {
@@ -185,31 +261,84 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                             </div>
                         ) : (
                             <div className="log-list">
-                                {filteredLogs.map((log, index) => (
-                                    <div
-                                        key={log.id || `${log.timestamp}-${index}`}
-                                        className={`log-entry ${getLogLevelClass(log.level)}`}
-                                        onClick={() => copyLogToClipboard(log)}
-                                        title="Click to copy this log entry"
-                                    >
-                                        <div className="log-meta">
-                                            <span className="log-time">
-                                                {formatTimestamp(log.timestamp)}
-                                            </span>
-                                            <span className="log-level">
-                                                {getLogIcon(log.level)} {log.level.toUpperCase()}
-                                            </span>
-                                            {log.source && (
-                                                <span className="log-source">
-                                                    [{log.source}]
-                                                </span>
+                                {filteredLogs.map((log, index) => {
+                                    const logId = log.id || `${log.timestamp}-${index}`;
+                                    const isExpanded = expandedLogs.has(logId);
+                                    const logDetails = extractLogDetails(log);
+                                    
+                                    return (
+                                        <div
+                                            key={logId}
+                                            className={`log-entry-compact ${getLogLevelClass(log.level)}`}
+                                        >
+                                            {/* Compact header */}
+                                            <div className="log-header-compact">
+                                                <div className="log-icon">
+                                                    {getLogIcon(log)}
+                                                </div>
+                                                <div className="log-content-compact">
+                                                    <div className="log-message-truncated">
+                                                        {truncateMessage(log.message, 2)}
+                                                    </div>
+                                                </div>
+                                                <div className="log-meta-compact">
+                                                    <span className="log-time-compact">
+                                                        {formatTimestamp(log.timestamp)}
+                                                    </span>
+                                                    <button
+                                                        className="log-expand-btn"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            toggleLogExpansion(logId);
+                                                        }}
+                                                        title={isExpanded ? "Collapse details" : "Expand details"}
+                                                    >
+                                                        {isExpanded ? '▼' : '▶'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Expanded details */}
+                                            {isExpanded && (
+                                                <div className="log-details-expanded">
+                                                    <div className="log-full-message">
+                                                        <strong>Full message:</strong>
+                                                        <div className="log-message-content">
+                                                            {log.message}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {logDetails.length > 0 && (
+                                                        <div className="log-metadata">
+                                                            <strong>Details:</strong>
+                                                            <div className="log-details-grid">
+                                                                {logDetails.map((detail, idx) => (
+                                                                    <div key={idx} className="log-detail-item">
+                                                                        <span className="detail-label">{detail.label}:</span>
+                                                                        <span className="detail-value">{detail.value}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    
+                                                    <div className="log-actions-expanded">
+                                                        <button
+                                                            onClick={() => copyLogToClipboard(log)}
+                                                            className="log-action-btn"
+                                                            title="Copy this log entry"
+                                                        >
+                                                            📋 Copy
+                                                        </button>
+                                                        <span className="log-level-badge">
+                                                            {log.level.toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
-                                        <div className="log-message">
-                                            {log.message}
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                                 <div ref={bottomRef} />
                             </div>
                         )}

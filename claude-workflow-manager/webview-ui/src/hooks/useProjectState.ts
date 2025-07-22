@@ -204,7 +204,7 @@ export function useProjectData() {
 
     // Computed properties for button states (matching StateManager logic)
     const canImportFeedback = !initInProgress && projectState?.isInitialized;
-    const canPlanEpics = !initInProgress && projectState?.hasFeedback && projectState?.isInitialized;
+    const canPlanEpics = !initInProgress && projectState?.isInitialized;
 
     return {
         projectState,

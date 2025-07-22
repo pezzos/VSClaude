@@ -63,7 +63,9 @@ export class StateManager {
         };
         console.log('Initial state created:', state);
 
-        // Check if project is initialized - adapt to VSClaude structure
+        // Check if project is initialized - prioritize persisted state
+        const persistedState = await this.loadPersistedState();
+        
         const readmePath = path.join(this.workspaceRoot, 'README.md');
         
         // For VSClaude: look for the actual project structure indicators
@@ -80,27 +82,39 @@ export class StateManager {
             state.name = await this.extractProjectName(readmePath);
         }
 
-        // Check initialization using VSClaude structure first
-        const vscodeStructureExists = await Promise.all(
-            vscodeInitIndicators.map(indicator => 
-                this.fileExists(path.join(this.workspaceRoot, indicator))
-            )
-        );
-        
-        const hasVSCodeStructure = vscodeStructureExists.some(exists => exists);
-        const hasLegacyStructure = await this.fileExists(legacyEpicsPath);
-        
-        console.log('🔍 Project structure detection:', {
-            hasVSCodeStructure,
-            hasLegacyStructure,
-            vscodeFiles: vscodeInitIndicators.map((file, i) => ({ file, exists: vscodeStructureExists[i] }))
-        });
-
-        if (hasVSCodeStructure || hasLegacyStructure) {
+        // Use persisted initialization state if available and true
+        if (persistedState?.isInitialized) {
             state.initialized = true;
-            console.log('✅ Project detected as initialized');
+            console.log('✅ Project marked as initialized from persisted state');
+        } else {
+            // Fallback to filesystem detection
+            const vscodeStructureExists = await Promise.all(
+                vscodeInitIndicators.map(indicator => 
+                    this.fileExists(path.join(this.workspaceRoot, indicator))
+                )
+            );
             
+            const hasVSCodeStructure = vscodeStructureExists.some(exists => exists);
+            const hasLegacyStructure = await this.fileExists(legacyEpicsPath);
+            
+            console.log('🔍 Project structure detection:', {
+                hasVSCodeStructure,
+                hasLegacyStructure,
+                vscodeFiles: vscodeInitIndicators.map((file, i) => ({ file, exists: vscodeStructureExists[i] }))
+            });
+
+            state.initialized = hasVSCodeStructure || hasLegacyStructure;
+            
+            if (state.initialized) {
+                console.log('✅ Project detected as initialized from filesystem');
+            } else {
+                console.log('❌ Project not detected as initialized');
+            }
+        }
+
+        if (state.initialized) {
             // Load epics from appropriate source
+            const hasLegacyStructure = await this.fileExists(legacyEpicsPath);
             if (hasLegacyStructure) {
                 state.epics = await this.loadEpics();
             } else {
@@ -113,8 +127,6 @@ export class StateManager {
             if (state.currentEpic) {
                 state.currentStory = await this.getCurrentStory(state.currentEpic);
             }
-        } else {
-            console.log('❌ Project not detected as initialized');
         }
 
         // Check update command availability
@@ -129,7 +141,14 @@ export class StateManager {
     async canImportFeedback(): Promise<boolean> {
         if (this.initInProgress) return false;
         
-        // Check for either legacy or VSClaude structure
+        // Use persisted initialization state as the source of truth
+        const persistedState = await this.loadPersistedState();
+        
+        if (persistedState && persistedState.isInitialized) {
+            return true;
+        }
+        
+        // Fallback to filesystem check only if no persisted state exists
         const legacyEpicsExists = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/EPICS.md'));
         const vscodeInitialized = await this.isVSClaudeInitialized();
         
@@ -139,9 +158,16 @@ export class StateManager {
     async canPlanEpics(): Promise<boolean> {
         if (this.initInProgress) return false;
         
-        const feedbackExists = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/FEEDBACK.md'));
+        // Use persisted initialization state as the source of truth
+        const persistedState = await this.loadPersistedState();
         
-        // Check for either legacy or VSClaude structure
+        if (persistedState && persistedState.isInitialized) {
+            // Once initialized, planning epics is always available
+            return true;
+        }
+        
+        // Fallback to filesystem check only if no persisted state exists
+        const feedbackExists = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/FEEDBACK.md'));
         const legacyEpicsExists = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/EPICS.md'));
         const vscodeInitialized = await this.isVSClaudeInitialized();
         
