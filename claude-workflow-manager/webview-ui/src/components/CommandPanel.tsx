@@ -72,69 +72,290 @@ export const CommandPanel: React.FC<CommandPanelProps> = ({ className }) => {
     const commandCategories: CommandCategory[] = [
         {
             id: 'project',
-            name: 'Project Management',
+            name: '1-PROJECT (Project Level)',
             icon: <Settings className="category-icon" />,
             commands: [
                 {
                     id: 'init-project',
                     name: 'Initialize Project',
                     command: '/1-project:1-start:1-Init-Project',
-                    description: 'Initialize a new Claude workflow project',
-                    args: ['New Project'],
+                    description: 'Creates docs structure and PRD template',
                     icon: <Play className="command-icon" />,
                     disabled: projectState?.isInitialized
                 },
                 {
-                    id: 'start-epic',
-                    name: 'Start New Epic',
-                    command: '/project:agile:start',
-                    description: 'Begin a new epic with requirements gathering',
-                    args: ['New Epic'],
+                    id: 'import-feedback',
+                    name: 'Import Feedback',
+                    command: '/1-project:2-update:1-Import-feedback',
+                    description: 'Import external feedback into project docs',
+                    icon: <Settings className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'challenge',
+                    name: 'Challenge Assumptions',
+                    command: '/1-project:2-update:2-Challenge',
+                    description: 'Challenge current assumptions and plans',
+                    icon: <AlertCircle className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'enrich-project',
+                    name: 'Enrich Context',
+                    command: '/1-project:2-update:3-Enrich',
+                    description: 'Add context and insights to project',
                     icon: <Zap className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'update-status',
+                    name: 'Update Status',
+                    command: '/1-project:2-update:4-Status',
+                    description: 'Check and update project status',
+                    icon: <Clock className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'implementation-status',
+                    name: 'Implementation Status',
+                    command: '/1-project:2-update:5-Implementation-Status',
+                    description: 'Review implementation progress',
+                    icon: <CheckCircle className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'plan-epics',
+                    name: 'Plan Epics',
+                    command: '/1-project:3-epics:1-Plan-Epics',
+                    description: 'Create EPICS.md with prioritized epics',
+                    icon: <Terminal className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'update-epic-implementation',
+                    name: 'Update Epic Implementation',
+                    command: '/1-project:3-epics:2-Update-Implementation',
+                    description: 'Update epic implementation status',
+                    icon: <Settings className="command-icon" />,
                     requiresProject: true
                 }
             ]
         },
         {
             id: 'epic',
-            name: 'Epic Management',
+            name: '2-EPIC (Epic Level)',
             icon: <Zap className="category-icon" />,
             commands: [
                 {
-                    id: 'design-epic',
-                    name: 'Design Architecture',
-                    command: '/project:agile:design',
-                    description: 'Create architecture design for current epic',
-                    icon: <Settings className="command-icon" />,
-                    requiresProject: true,
-                    disabled: !projectState?.currentEpic
-                },
-                {
-                    id: 'plan-epic',
-                    name: 'Plan Implementation',
-                    command: '/project:agile:plan',
-                    description: 'Generate detailed implementation plan',
-                    icon: <Terminal className="command-icon" />,
-                    requiresProject: true,
-                    disabled: !projectState?.currentEpic
-                },
-                {
-                    id: 'iterate-epic',
-                    name: 'Start Development',
-                    command: '/project:agile:iterate',
-                    description: 'Begin development iteration',
+                    id: 'select-stories',
+                    name: 'Select Epic & Stories',
+                    command: '/2-epic:1-start:1-Select-Stories',
+                    description: 'Choose next epic and create PRD',
                     icon: <Play className="command-icon" />,
-                    requiresProject: true,
-                    disabled: !projectState?.currentEpic
+                    requiresProject: true
                 },
                 {
-                    id: 'ship-epic',
-                    name: 'Ship & Release',
-                    command: '/project:agile:ship',
-                    description: 'Finalize and ship the current epic',
+                    id: 'plan-stories',
+                    name: 'Plan Stories',
+                    command: '/2-epic:1-start:2-Plan-stories',
+                    description: 'Create STORIES.md with acceptance criteria',
+                    icon: <Terminal className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'complete-epic',
+                    name: 'Complete Epic',
+                    command: '/2-epic:2-manage:1-Complete-Epic',
+                    description: 'Archive completed epic',
                     icon: <CheckCircle className="command-icon" />,
-                    requiresProject: true,
-                    disabled: !projectState?.currentEpic
+                    requiresProject: true
+                },
+                {
+                    id: 'epic-status',
+                    name: 'Epic Status',
+                    command: '/2-epic:2-manage:2-Status-Epic',
+                    description: 'Check epic progress and blockers',
+                    icon: <Clock className="command-icon" />,
+                    requiresProject: true
+                }
+            ]
+        },
+        {
+            id: 'story',
+            name: '3-STORY (Story Level)',
+            icon: <History className="category-icon" />,
+            commands: [
+                {
+                    id: 'start-story',
+                    name: 'Start Story',
+                    command: '/3-story:1-manage:1-Start-Story',
+                    description: 'Select story and create TODO.md',
+                    icon: <Play className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'complete-story',
+                    name: 'Complete Story',
+                    command: '/3-story:1-manage:2-Complete-Story',
+                    description: 'Mark story complete and update docs',
+                    icon: <CheckCircle className="command-icon" />,
+                    requiresProject: true
+                }
+            ]
+        },
+        {
+            id: 'ticket',
+            name: '4-TICKET (Ticket Level)',
+            icon: <Terminal className="category-icon" />,
+            commands: [
+                {
+                    id: 'ticket-from-story',
+                    name: 'Ticket from Story',
+                    command: '/4-ticket:1-start:1-From-story',
+                    description: 'Create ticket from current story',
+                    icon: <Play className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'ticket-from-issue',
+                    name: 'Ticket from Issue',
+                    command: '/4-ticket:1-start:2-From-issue',
+                    description: 'Create ticket from GitHub issue',
+                    icon: <Settings className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'ticket-from-input',
+                    name: 'Ticket from Input',
+                    command: '/4-ticket:1-start:3-From-input',
+                    description: 'Create ticket from user input',
+                    icon: <Zap className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'plan-ticket',
+                    name: 'Plan Ticket',
+                    command: '/4-ticket:2-execute:1-Plan-Ticket',
+                    description: 'Create detailed implementation plan',
+                    icon: <Terminal className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'test-design',
+                    name: 'Design Tests',
+                    command: '/4-ticket:2-execute:2-Test-design',
+                    description: 'Design test strategy and cases',
+                    icon: <Settings className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'implement',
+                    name: 'Implement',
+                    command: '/4-ticket:2-execute:3-Implement',
+                    description: 'Code implementation and testing',
+                    icon: <Play className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'validate-ticket',
+                    name: 'Validate Ticket',
+                    command: '/4-ticket:2-execute:4-Validate-Ticket',
+                    description: 'Validate against acceptance criteria',
+                    icon: <CheckCircle className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'review-ticket',
+                    name: 'Review Ticket',
+                    command: '/4-ticket:2-execute:5-Review-Ticket',
+                    description: 'Final review and documentation',
+                    icon: <Settings className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'archive-ticket',
+                    name: 'Archive Ticket',
+                    command: '/4-ticket:3-complete:1-Archive-Ticket',
+                    description: 'Archive completed ticket',
+                    icon: <XCircle className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'status-ticket',
+                    name: 'Ticket Status',
+                    command: '/4-ticket:3-complete:2-Status-Ticket',
+                    description: 'Update ticket status in docs',
+                    icon: <Clock className="command-icon" />,
+                    requiresProject: true
+                }
+            ]
+        },
+        {
+            id: 'support',
+            name: 'Support Tools',
+            icon: <Settings className="category-icon" />,
+            commands: [
+                {
+                    id: 'debug-check-state',
+                    name: 'Debug: Check State',
+                    command: '/debug:1-Check-state',
+                    description: 'Verify project structure integrity',
+                    icon: <AlertCircle className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'debug-fix-structure',
+                    name: 'Debug: Fix Structure',
+                    command: '/debug:2-Fix-structure',
+                    description: 'Repair project structure issues',
+                    icon: <Settings className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'enrich-global',
+                    name: 'Enrich: Global Context',
+                    command: '/enrich:1-claude:1-Global',
+                    description: 'Update global Claude context',
+                    icon: <Zap className="command-icon" />
+                },
+                {
+                    id: 'enrich-epic',
+                    name: 'Enrich: Epic Context',
+                    command: '/enrich:1-claude:2-Epic',
+                    description: 'Enrich epic-specific context',
+                    icon: <Zap className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'enrich-post-ticket',
+                    name: 'Enrich: Post-Ticket',
+                    command: '/enrich:1-claude:3-Post-ticket',
+                    description: 'Update context after ticket completion',
+                    icon: <Zap className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'metrics-update',
+                    name: 'Metrics: Update',
+                    command: '/metrics:1-manage:1-Update',
+                    description: 'Update project metrics',
+                    icon: <History className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'metrics-dashboard',
+                    name: 'Metrics: Dashboard',
+                    command: '/metrics:1-manage:2-Dashboard',
+                    description: 'Generate metrics dashboard',
+                    icon: <History className="command-icon" />,
+                    requiresProject: true
+                },
+                {
+                    id: 'learning-dashboard',
+                    name: 'Learning Dashboard',
+                    command: '/learning:dashboard',
+                    description: 'Display learning insights and patterns',
+                    icon: <Settings className="command-icon" />
                 }
             ]
         },
@@ -145,9 +366,9 @@ export const CommandPanel: React.FC<CommandPanelProps> = ({ className }) => {
             commands: [
                 {
                     id: 'clear-workspace',
-                    name: 'Clear Workspace',
+                    name: 'Clear Context',
                     command: '/clear',
-                    description: 'Clear the current workspace state',
+                    description: 'Clear conversation context',
                     icon: <Square className="command-icon" />
                 }
             ]

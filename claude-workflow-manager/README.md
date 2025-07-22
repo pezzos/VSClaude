@@ -122,21 +122,60 @@ The tree view shows different items based on your project state:
        └── ⏳ Write tests
 ```
 
-### Available Actions
+### Available Commands
 
+#### 1-PROJECT (Project Level)
 | Action | Description | Command |
 |--------|-------------|---------|
-| 🔧 Initialize Project | Set up Claude workflow | `/1-Init` |
-| 📋 Import Feedback | Import user feedback | `/2-Update feedback` |
-| 🔍 Update Challenge | Update challenges | `/2-Update challenge` |
-| 📊 Update Status | Update project status | `/2-Update status` |
-| ➕ Enrich Project | Add context | `/2-Update enrich` |
-| 📚 Plan Epics | Plan project epics | `/3-Epic plan` |
-| 🎯 Select Epic | Select current epic | `/4-Epic select` |
-| ✅ Complete Epic | Mark epic as done | `/4-Epic complete` |
-| 📝 Plan Stories | Plan user stories | `/5-Story plan` |
-| ▶️ Start Story | Begin story work | `/6-Story start` |
-| ✅ Complete Story | Mark story as done | `/6-Story complete` |
+| 🔧 Initialize Project | Creates docs structure and PRD template | `/1-project:1-start:1-Init-Project` |
+| 📋 Import Feedback | Import external feedback into project docs | `/1-project:2-update:1-Import-feedback` |
+| 🔍 Challenge Assumptions | Challenge current assumptions and plans | `/1-project:2-update:2-Challenge` |
+| ➕ Enrich Context | Add context and insights to project | `/1-project:2-update:3-Enrich` |
+| 📊 Update Status | Check and update project status | `/1-project:2-update:4-Status` |
+| 📈 Implementation Status | Review implementation progress | `/1-project:2-update:5-Implementation-Status` |
+| 📚 Plan Epics | Create EPICS.md with prioritized epics | `/1-project:3-epics:1-Plan-Epics` |
+| 🔄 Update Epic Implementation | Update epic implementation status | `/1-project:3-epics:2-Update-Implementation` |
+
+#### 2-EPIC (Epic Level)
+| Action | Description | Command |
+|--------|-------------|---------|
+| 🎯 Select Epic & Stories | Choose next epic and create PRD | `/2-epic:1-start:1-Select-Stories` |
+| 📝 Plan Stories | Create STORIES.md with acceptance criteria | `/2-epic:1-start:2-Plan-stories` |
+| ✅ Complete Epic | Archive completed epic | `/2-epic:2-manage:1-Complete-Epic` |
+| 📊 Epic Status | Check epic progress and blockers | `/2-epic:2-manage:2-Status-Epic` |
+
+#### 3-STORY (Story Level)
+| Action | Description | Command |
+|--------|-------------|---------|
+| ▶️ Start Story | Select story and create TODO.md | `/3-story:1-manage:1-Start-Story` |
+| ✅ Complete Story | Mark story complete and update docs | `/3-story:1-manage:2-Complete-Story` |
+
+#### 4-TICKET (Ticket Level)
+| Action | Description | Command |
+|--------|-------------|---------|
+| 🎫 Ticket from Story | Create ticket from current story | `/4-ticket:1-start:1-From-story` |
+| 🎫 Ticket from Issue | Create ticket from GitHub issue | `/4-ticket:1-start:2-From-issue` |
+| 🎫 Ticket from Input | Create ticket from user input | `/4-ticket:1-start:3-From-input` |
+| 📋 Plan Ticket | Create detailed implementation plan | `/4-ticket:2-execute:1-Plan-Ticket` |
+| 🧪 Design Tests | Design test strategy and cases | `/4-ticket:2-execute:2-Test-design` |
+| 🔧 Implement | Code implementation and testing | `/4-ticket:2-execute:3-Implement` |
+| ✅ Validate Ticket | Validate against acceptance criteria | `/4-ticket:2-execute:4-Validate-Ticket` |
+| 👁️ Review Ticket | Final review and documentation | `/4-ticket:2-execute:5-Review-Ticket` |
+| 📦 Archive Ticket | Archive completed ticket | `/4-ticket:3-complete:1-Archive-Ticket` |
+| 📊 Ticket Status | Update ticket status in docs | `/4-ticket:3-complete:2-Status-Ticket` |
+
+#### Support Tools
+| Action | Description | Command |
+|--------|-------------|---------|
+| 🐛 Debug: Check State | Verify project structure integrity | `/debug:1-Check-state` |
+| 🔧 Debug: Fix Structure | Repair project structure issues | `/debug:2-Fix-structure` |
+| 🌐 Enrich: Global Context | Update global Claude context | `/enrich:1-claude:1-Global` |
+| 🎯 Enrich: Epic Context | Enrich epic-specific context | `/enrich:1-claude:2-Epic` |
+| 📝 Enrich: Post-Ticket | Update context after ticket completion | `/enrich:1-claude:3-Post-ticket` |
+| 📊 Metrics: Update | Update project metrics | `/metrics:1-manage:1-Update` |
+| 📈 Metrics: Dashboard | Generate metrics dashboard | `/metrics:1-manage:2-Dashboard` |
+| 📚 Learning Dashboard | Display learning insights and patterns | `/learning:dashboard` |
+| 🧹 Clear Context | Clear conversation context | `/clear` |
 
 ## Configuration
 

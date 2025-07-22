@@ -31,13 +31,13 @@ export class CommandExecutor {
         
         // Commands that require medium timeouts (5 minutes)
         const mediumCommands = [
-            'Select-Stories',
-            'Start-Story',
-            'Complete-Story',
-            'Complete-Epic',
-            'Test-design',
-            'Validate-Ticket',
-            'Review-Ticket'
+            '/2-epic:1-start:1-Select-Stories',
+            '/3-story:1-manage:1-Start-Story',
+            '/3-story:1-manage:2-Complete-Story',
+            '/2-epic:2-manage:1-Complete-Epic',
+            '/4-ticket:2-execute:2-Test-design',
+            '/4-ticket:2-execute:4-Validate-Ticket',
+            '/4-ticket:2-execute:5-Review-Ticket'
         ];
         
         if (longCommands.some(cmd => command.includes(cmd))) {

@@ -23,17 +23,17 @@ export const ActionHeader: React.FC<ActionHeaderProps> = ({
     const api = useVSCodeAPI();
 
     const handleInitializeProject = () => {
-        api.executeCommand('Init-Project');
+        api.executeCommand('/1-project:1-start:1-Init-Project');
         onInitializeProject?.();
     };
 
     const handleImportFeedback = () => {
-        api.executeCommand('Import-FEEDBACK.md');
+        api.executeCommand('/1-project:2-update:1-Import-feedback');
         onImportFeedback?.();
     };
 
     const handlePlanEpics = () => {
-        api.executeCommand('Plan-Epics');
+        api.executeCommand('/1-project:3-epics:1-Plan-Epics');
         onPlanEpics?.();
     };
 
