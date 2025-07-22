@@ -147,7 +147,7 @@ export function activate(context: vscode.ExtensionContext) {
                         treeProvider.refresh();
                         vscode.window.showInformationMessage('🎉 Project initialization completed successfully!');
                     } else {
-                        console.log('⚠️ Initialization incomplete or validation failed');
+                        logExtension('⚠️ Initialization incomplete or validation failed', 'warn');
                         treeProvider.refresh(); // Refresh anyway to show current state
                         
                         if (result.validation) {
@@ -171,23 +171,23 @@ export function activate(context: vscode.ExtensionContext) {
         }),
 
         vscode.commands.registerCommand('claudeWorkflow.selectEpic', async () => {
-            console.log('🎯 STARTING EPIC SELECTION');
+            logExtension('🎯 STARTING EPIC SELECTION');
             await commandExecutor.executeCommand('/2-epic:1-start:1-Select-Stories');
             vscode.window.showInformationMessage('Epic selection started');
-            console.log('✅ Epic selection completed, scheduling refresh...');
+            logExtension('✅ Epic selection completed, scheduling refresh...');
             setTimeout(() => {
-                console.log('⏰ REFRESH after epic selection');
+                logExtension('⏰ REFRESH after epic selection');
                 treeProvider.refresh();
             }, 4000);
         }),
 
         vscode.commands.registerCommand('claudeWorkflow.startStory', async () => {
-            console.log('📝 STARTING STORY');
+            logExtension('📝 STARTING STORY');
             await commandExecutor.executeCommand('/3-story:1-manage:1-Start-Story');
             vscode.window.showInformationMessage('Story started');
-            console.log('✅ Story start completed, scheduling refresh...');
+            logExtension('✅ Story start completed, scheduling refresh...');
             setTimeout(() => {
-                console.log('⏰ REFRESH after story start');
+                logExtension('⏰ REFRESH after story start');
                 treeProvider.refresh();
             }, 3000);
         }),
@@ -213,23 +213,28 @@ export function activate(context: vscode.ExtensionContext) {
         }),
 
         vscode.commands.registerCommand('claudeWorkflow.planEpics', async () => {
-            console.log('📋 STARTING EPIC PLANNING');
-            await commandExecutor.executeCommand('/1-project:3-epics:1-Plan-Epics');
+            logExtension('📋 STARTING EPIC PLANNING');
+            const success = await commandExecutor.executeCommand('/1-project:3-epics:1-Plan-Epics');
+            if (success) {
+                // Mark command as executed for state tracking
+                await stateManager.markCommandExecuted('/1-project:3-epics:1-Plan-Epics');
+                logExtension('✅ Plan Epics command marked as executed');
+            }
             vscode.window.showInformationMessage('Epic planning started');
-            console.log('✅ Epic planning completed, scheduling refresh...');
+            logExtension('✅ Epic planning completed, scheduling refresh...');
             setTimeout(() => {
-                console.log('⏰ REFRESH after epic planning');
+                logExtension('⏰ REFRESH after epic planning');
                 treeProvider.refresh();
             }, 6000);
         }),
 
         vscode.commands.registerCommand('claudeWorkflow.planStories', async () => {
-            console.log('📋 STARTING STORY PLANNING');
+            logExtension('📋 STARTING STORY PLANNING');
             await commandExecutor.executeCommand('/2-epic:1-start:2-Plan-stories');
             vscode.window.showInformationMessage('Story planning started');
-            console.log('✅ Story planning completed, scheduling refresh...');
+            logExtension('✅ Story planning completed, scheduling refresh...');
             setTimeout(() => {
-                console.log('⏰ REFRESH after story planning');
+                logExtension('⏰ REFRESH after story planning');
                 treeProvider.refresh();
             }, 5000);
         }),
@@ -275,39 +280,39 @@ export function activate(context: vscode.ExtensionContext) {
 
         // Output panel commands
         vscode.commands.registerCommand('claudeWorkflow.refreshOutput', () => {
-            console.log('🔄 REFRESH OUTPUT PANEL COMMAND');
+            logExtension('🔄 REFRESH OUTPUT PANEL COMMAND');
             outputLogProvider.refresh();
         }),
 
         vscode.commands.registerCommand('claudeWorkflow.clearOutput', () => {
-            console.log('🗑️ CLEAR OUTPUT PANEL COMMAND');
+            logExtension('🗑️ CLEAR OUTPUT PANEL COMMAND');
             outputLogProvider.clear();
             vscode.window.showInformationMessage('Output log cleared');
         })
     ];
 
     // Register all commands for disposal
-    console.log(`🔧 REGISTERING ${commands.length} COMMANDS`);
+    logExtension(`🔧 REGISTERING ${commands.length} COMMANDS`);
     context.subscriptions.push(...commands);
     context.subscriptions.push(treeView);
     context.subscriptions.push(outputView);
     context.subscriptions.push(commandExecutor);
     context.subscriptions.push(stateEventBus);
     context.subscriptions.push(webviewProvider);
-    console.log('✅ ALL COMMANDS REGISTERED!');
+    logExtension('✅ ALL COMMANDS REGISTERED!');
 
     // Set up status bar item
-    console.log('📊 SETTING UP STATUS BAR');
+    logExtension('📊 SETTING UP STATUS BAR');
     const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     statusBarItem.text = '$(tools) Claude Workflow';
     statusBarItem.tooltip = 'Claude Workflow Manager';
     statusBarItem.command = 'claudeWorkflow.showCurrent';
     statusBarItem.show();
     context.subscriptions.push(statusBarItem);
-    console.log('✅ STATUS BAR SETUP COMPLETE!');
+    logExtension('✅ STATUS BAR SETUP COMPLETE!');
 
     // Show welcome message
-    console.log('💬 SHOWING WELCOME MESSAGE');
+    logExtension('💬 SHOWING WELCOME MESSAGE');
     if (vscode.workspace.getConfiguration('claudeWorkflowManager').get('showWelcome', true)) {
         vscode.window.showInformationMessage(
             '🎉 Claude Workflow Manager is now ACTIVE! Find it in the Activity Bar on the left.',
@@ -321,9 +326,9 @@ export function activate(context: vscode.ExtensionContext) {
         });
     }
     
-    console.log('🎯 CLAUDE WORKFLOW MANAGER ACTIVATION COMPLETE!');
+    logExtension('🎯 CLAUDE WORKFLOW MANAGER ACTIVATION COMPLETE!');
 }
 
 export function deactivate() {
-    console.log('Claude Workflow Manager extension is deactivated');
+    logExtension('Claude Workflow Manager extension is deactivated');
 }

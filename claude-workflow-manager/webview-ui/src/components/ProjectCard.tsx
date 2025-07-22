@@ -62,7 +62,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 
     const clearLogs = () => {
         // This would need to be passed as a prop or handled by parent
-        console.log('Clear logs requested');
+        // Removed console logging to reduce VSCode console clutter
     };
 
     const getLogLevelClass = (level: string): string => {

@@ -43,9 +43,11 @@ export class StateManager {
     };
     private initInProgress: boolean = false;
     private stateFilePath: string;
+    private outputChannel: vscode.OutputChannel;
 
     constructor(workspaceRoot: string) {
-        console.log('StateManager constructor, workspaceRoot:', workspaceRoot);
+        this.outputChannel = vscode.window.createOutputChannel('Claude Workflow Manager - State');
+        this.log('StateManager constructor, workspaceRoot:', workspaceRoot);
         this.workspaceRoot = workspaceRoot;
         this.stateFilePath = path.join(workspaceRoot, '.claude-wm', 'state.json');
         this.parsers = {
@@ -55,8 +57,21 @@ export class StateManager {
         };
     }
 
+    /**
+     * Central logging method that writes to extension's OutputChannel
+     */
+    private log(message: string, data?: any, level: 'info' | 'warn' | 'error' = 'info'): void {
+        const timestamp = new Date().toLocaleTimeString();
+        const prefix = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : 'ℹ️';
+        const formattedMessage = data 
+            ? `[${timestamp}] ${prefix} ${message} ${JSON.stringify(data)}`
+            : `[${timestamp}] ${prefix} ${message}`;
+        
+        this.outputChannel.appendLine(formattedMessage);
+    }
+
     async getProjectState(): Promise<ProjectState> {
-        console.log('getProjectState called');
+        this.log('getProjectState called');
         const state: ProjectState = {
             initialized: false,
             epics: [],
@@ -68,7 +83,7 @@ export class StateManager {
             hasExecutedPlanEpics: false,
             epicTitles: []
         };
-        console.log('Initial state created:', state);
+        this.log('Initial state created:', state);
 
         // Check if project is initialized - prioritize persisted state
         const persistedState = await this.loadPersistedState();
@@ -92,7 +107,7 @@ export class StateManager {
         // Use persisted initialization state if available and true
         if (persistedState?.isInitialized) {
             state.initialized = true;
-            console.log('✅ Project marked as initialized from persisted state');
+            this.log('✅ Project marked as initialized from persisted state');
         } else {
             // Fallback to filesystem detection
             const vscodeStructureExists = await Promise.all(
@@ -104,7 +119,7 @@ export class StateManager {
             const hasVSCodeStructure = vscodeStructureExists.some(exists => exists);
             const hasLegacyStructure = await this.fileExists(legacyEpicsPath);
             
-            console.log('🔍 Project structure detection:', {
+            this.log('🔍 Project structure detection:', {
                 hasVSCodeStructure,
                 hasLegacyStructure,
                 vscodeFiles: vscodeInitIndicators.map((file, i) => ({ file, exists: vscodeStructureExists[i] }))
@@ -113,27 +128,41 @@ export class StateManager {
             state.initialized = hasVSCodeStructure || hasLegacyStructure;
             
             if (state.initialized) {
-                console.log('✅ Project detected as initialized from filesystem');
+                this.log('✅ Project detected as initialized from filesystem');
             } else {
-                console.log('❌ Project not detected as initialized');
+                this.log('❌ Project not detected as initialized');
             }
         }
 
-        if (state.initialized) {
+        // Check if commands have been executed early to influence epic parsing
+        const commandState = await this.loadPersistedState();
+        
+        // Parse epics if project is initialized OR if Plan Epics has been executed
+        const shouldParseEpics = state.initialized || commandState?.hasExecutedPlanEpics;
+        
+        if (shouldParseEpics) {
+            this.log('🔍 Parsing epics - initialized:', state.initialized, 'hasExecutedPlanEpics:', commandState?.hasExecutedPlanEpics);
+            
             // Load epics from appropriate source
             const hasLegacyStructure = await this.fileExists(legacyEpicsPath);
             if (hasLegacyStructure) {
+                this.log('📋 Loading epics from legacy EPICS.md');
                 state.epics = await this.loadEpics();
             } else {
                 // For VSClaude, epics might be in different format/location
+                this.log('📋 Loading epics from VSClaude structure');
                 state.epics = await this.loadVSClaudeEpics();
             }
+            
+            this.log('📊 Parsed epics count:', state.epics?.length || 0);
             
             state.currentEpic = await this.getCurrentEpic();
             
             if (state.currentEpic) {
                 state.currentStory = await this.getCurrentStory(state.currentEpic);
             }
+        } else {
+            this.log('⚠️ Skipping epic parsing - project not initialized and Plan Epics not executed');
         }
 
         // Check update command availability
@@ -144,15 +173,14 @@ export class StateManager {
         // Check if FEEDBACK.md has valid content (not empty or template)
         state.hasValidFeedback = await this.hasValidFeedbackContent();
         
-        // Check if commands have been executed (from persisted state or file existence)
-        const commandState = await this.loadPersistedState();
+        // Set command execution states (commandState already loaded above)
         state.hasExecutedImportFeedback = commandState?.hasExecutedImportFeedback || state.hasFeedback;
         state.hasExecutedPlanEpics = commandState?.hasExecutedPlanEpics || (state.epics.length > 0);
 
         // Load epic titles from EPICS.md if it exists
         state.epicTitles = await this.loadEpicTitles();
 
-        console.log('Final state:', state);
+        this.log('Final state:', state);
         return state;
     }
 
@@ -230,7 +258,7 @@ export class StateManager {
             const parseResult = this.parsers.project.parseEpics(content);
             return parseResult.success ? parseResult.data! : [];
         } catch (error) {
-            console.error('Error loading epics:', error);
+            this.log('Error loading epics:', error, 'error');
             return [];
         }
     }
@@ -250,7 +278,7 @@ export class StateManager {
                 return epic;
             }
         } catch (error) {
-            console.error('Error loading current epic:', error);
+            this.log('Error loading current epic:', error, 'error');
         }
 
         return undefined;
@@ -272,7 +300,7 @@ export class StateManager {
                 }));
             }
         } catch (error) {
-            console.error('Error loading stories:', error);
+            this.log('Error loading stories:', error, 'error');
         }
 
         return [];
@@ -300,7 +328,7 @@ export class StateManager {
                 };
             }
         } catch (error) {
-            console.error('Error loading current story:', error);
+            this.log('Error loading current story:', error, 'error');
         }
 
         return undefined;
@@ -346,7 +374,7 @@ export class StateManager {
                     epics.push(epic);
                 }
             } catch (error) {
-                console.error('Error loading VSClaude epic from PRD:', error);
+                this.log('Error loading VSClaude epic from PRD:', error, 'error');
             }
         }
         
@@ -388,7 +416,7 @@ export class StateManager {
     async waitForInitialization(timeoutMs: number = 300000): Promise<boolean> {
         const startTime = Date.now();
         const pollInterval = 2000; // Check every 2 seconds
-        console.log('🔄 Starting intelligent polling for project initialization...');
+        this.log('🔄 Starting intelligent polling for project initialization...');
         
         return new Promise((resolve) => {
             const poll = async () => {
@@ -402,7 +430,7 @@ export class StateManager {
                     const legacyExists = await this.fileExists(legacyEpicsPath);
                     const vscodeInitialized = await this.isVSClaudeInitialized();
                     
-                    console.log(`📋 Polling check: README.md=${readmeExists}, Legacy=${legacyExists}, VSCode=${vscodeInitialized}`);
+                    this.log(`📋 Polling check: README.md=${readmeExists}, Legacy=${legacyExists}, VSCode=${vscodeInitialized}`);
                     
                     if (readmeExists && (legacyExists || vscodeInitialized)) {
                         // Additional validation: check if files have content
@@ -421,10 +449,10 @@ export class StateManager {
                             structureValid = prdValid || roadmapValid;
                         }
                         
-                        console.log(`✅ Content validation: README.md=${readmeValid}, Structure=${structureValid}`);
+                        this.log(`✅ Content validation: README.md=${readmeValid}, Structure=${structureValid}`);
                         
                         if (readmeValid && structureValid) {
-                            console.log('🎉 Project initialization completed successfully!');
+                            this.log('🎉 Project initialization completed successfully!');
                             resolve(true);
                             return;
                         }
@@ -432,7 +460,7 @@ export class StateManager {
                     
                     // Check timeout
                     if (Date.now() - startTime > timeoutMs) {
-                        console.log('⏰ Timeout reached waiting for initialization');
+                        this.log('⏰ Timeout reached waiting for initialization', undefined, 'warn');
                         resolve(false);
                         return;
                     }
@@ -440,7 +468,7 @@ export class StateManager {
                     // Continue polling
                     setTimeout(poll, pollInterval);
                 } catch (error) {
-                    console.error('❌ Error during polling:', error);
+                    this.log('❌ Error during polling:', error, 'error');
                     setTimeout(poll, pollInterval);
                 }
             };
@@ -486,7 +514,7 @@ export class StateManager {
         const missingFiles: string[] = [];
         const invalidFiles: string[] = [];
 
-        console.log('🔍 Validating complete project structure...');
+        this.log('🔍 Validating complete project structure...');
 
         // Determine which structure to validate based on what exists
         const legacyExists = await this.fileExists(path.join(this.workspaceRoot, 'docs/1-project/EPICS.md'));
@@ -507,27 +535,27 @@ export class StateManager {
             structureType = 'VSClaude (default)';
         }
         
-        console.log(`🏗️ Validating ${structureType} project structure`);
+        this.log(`🏗️ Validating ${structureType} project structure`);
 
         for (const relativePath of requiredFiles) {
             const fullPath = path.join(this.workspaceRoot, relativePath);
             
             if (!await this.fileExists(fullPath)) {
                 missingFiles.push(relativePath);
-                console.log(`❌ Missing file: ${relativePath}`);
+                this.log(`❌ Missing file: ${relativePath}`, undefined, 'warn');
             } else {
                 const isValid = await this.validateFileContent(fullPath);
                 if (!isValid) {
                     invalidFiles.push(relativePath);
-                    console.log(`⚠️ Invalid content in: ${relativePath}`);
+                    this.log(`⚠️ Invalid content in: ${relativePath}`, undefined, 'warn');
                 } else {
-                    console.log(`✅ Valid file: ${relativePath}`);
+                    this.log(`✅ Valid file: ${relativePath}`);
                 }
             }
         }
 
         const valid = missingFiles.length === 0 && invalidFiles.length === 0;
-        console.log(`📊 ${structureType} project validation result: ${valid ? 'VALID' : 'INVALID'}`);
+        this.log(`📊 ${structureType} project validation result: ${valid ? 'VALID' : 'INVALID'}`);
         
         return { valid, missingFiles, invalidFiles };
     }
@@ -559,14 +587,14 @@ export class StateManager {
     async loadPersistedState(): Promise<PersistedState | null> {
         try {
             if (!await this.fileExists(this.stateFilePath)) {
-                console.log('📁 No persisted state file found');
+                this.log('📁 No persisted state file found');
                 return null;
             }
 
             const content = await fs.promises.readFile(this.stateFilePath, 'utf8');
             const state: PersistedState = JSON.parse(content);
             
-            console.log('📤 Loaded persisted state:', {
+            this.log('📤 Loaded persisted state:', {
                 isInitialized: state.isInitialized,
                 commandHistoryLength: state.commandHistory?.length || 0,
                 lastUpdated: new Date(state.lastUpdated).toISOString()
@@ -574,7 +602,7 @@ export class StateManager {
             
             return state;
         } catch (error) {
-            console.error('❌ Error loading persisted state:', error);
+            this.log('❌ Error loading persisted state:', error, 'error');
             return null;
         }
     }
@@ -613,9 +641,9 @@ export class StateManager {
                 'utf8'
             );
 
-            console.log('💾 State persisted successfully to:', this.stateFilePath);
+            this.log('💾 State persisted successfully to:', this.stateFilePath);
         } catch (error) {
-            console.error('❌ Error saving persisted state:', error);
+            this.log('❌ Error saving persisted state:', error, 'error');
         }
     }
 
@@ -632,7 +660,7 @@ export class StateManager {
         if (persistedState) {
             // Check if the filesystem state indicates initialization but persisted state doesn't
             if (currentState.initialized && !persistedState.isInitialized) {
-                console.log('🔄 Detected new initialization, updating persisted state...');
+                this.log('🔄 Detected new initialization, updating persisted state...');
                 persistedState.isInitialized = true;
                 persistedState.lastInitDate = Date.now();
             }
@@ -665,10 +693,10 @@ export class StateManager {
         try {
             if (await this.fileExists(this.stateFilePath)) {
                 await fs.promises.unlink(this.stateFilePath);
-                console.log('🗑️ Persisted state cleared');
+                this.log('🗑️ Persisted state cleared');
             }
         } catch (error) {
-            console.error('❌ Error clearing persisted state:', error);
+            this.log('❌ Error clearing persisted state:', error, 'error');
         }
     }
 
@@ -717,7 +745,7 @@ export class StateManager {
             // Content is valid if it's substantial and doesn't appear to be a template
             return trimmedContent.length > 50;
         } catch (error) {
-            console.error('Error reading FEEDBACK.md:', error);
+            this.log('Error reading FEEDBACK.md:', error, 'error');
             return false;
         }
     }
@@ -737,7 +765,7 @@ export class StateManager {
             const parseResult = this.parsers.project.parseEpicTitles(content);
             return parseResult.success ? parseResult.data! : [];
         } catch (error) {
-            console.error('Error loading epic titles:', error);
+            this.log('Error loading epic titles:', error, 'error');
             return [];
         }
     }
@@ -764,10 +792,10 @@ export class StateManager {
                     'utf8'
                 );
                 
-                console.log(`🔄 Marked command as executed: ${command}`);
+                this.log(`🔄 Marked command as executed: ${command}`);
             }
         } catch (error) {
-            console.error('❌ Error marking command as executed:', error);
+            this.log('❌ Error marking command as executed:', error, 'error');
         }
     }
 }

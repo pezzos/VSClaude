@@ -14,12 +14,8 @@ export function useProjectData() {
     const realProjectData = useRealProjectData();
     const [isUsingFakeData] = useState(isBrowserDev());
 
-    // Log environment info for debugging
-    useEffect(() => {
-        const envInfo = getEnvironmentInfo();
-        console.log('Environment detected:', envInfo);
-        console.log('Using fake data:', isUsingFakeData);
-    }, [isUsingFakeData]);
+    // Environment info available via getEnvironmentInfo() if needed
+    // Removed console logging to reduce VSCode console clutter
 
     // Return fake data for browser development
     if (isUsingFakeData) {

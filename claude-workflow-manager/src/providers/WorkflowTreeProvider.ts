@@ -11,14 +11,29 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
     private stateManager: StateManager;
     private projectState: ProjectState | undefined;
     private disposables: vscode.Disposable[] = [];
+    private outputChannel: vscode.OutputChannel;
 
     constructor(private workspaceRoot: string, private stateEventBus?: StateEventBus) {
-        console.log('🌳 WorkflowTreeProvider CONSTRUCTOR');
-        console.log('📁 Workspace Root:', workspaceRoot);
+        this.outputChannel = vscode.window.createOutputChannel('Claude Workflow Manager - Tree');
+        this.log('🌳 WorkflowTreeProvider CONSTRUCTOR');
+        this.log('📁 Workspace Root:', workspaceRoot);
         this.stateManager = new StateManager(workspaceRoot);
         this.initializeWatchers();
         this.setupStateEventListeners();
-        console.log('✅ WorkflowTreeProvider initialized successfully');
+        this.log('✅ WorkflowTreeProvider initialized successfully');
+    }
+
+    /**
+     * Central logging method that writes to extension's OutputChannel
+     */
+    private log(message: string, data?: any, level: 'info' | 'warn' | 'error' = 'info'): void {
+        const timestamp = new Date().toLocaleTimeString();
+        const prefix = level === 'error' ? '❌' : level === 'warn' ? '⚠️' : 'ℹ️';
+        const formattedMessage = data 
+            ? `[${timestamp}] ${prefix} ${message} ${JSON.stringify(data)}`
+            : `[${timestamp}] ${prefix} ${message}`;
+        
+        this.outputChannel.appendLine(formattedMessage);
     }
 
     private async initializeWatchers(): Promise<void> {
@@ -202,7 +217,7 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
             ];
         }
 
-        console.log('✅ Project state found - creating project item');
+        this.log('✅ Project state found - creating project item');
         const projectName = this.projectState.name || 'Claude Project';
         const projectLabel = this.projectState.initialized ? projectName : `${projectName} (not initialized)`;
 
@@ -218,9 +233,9 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
     }
 
     private getProjectChildren(): WorkflowTreeItem[] {
-        console.log('🏗️ GET PROJECT CHILDREN');
+        this.log('🏗️ GET PROJECT CHILDREN');
         if (!this.projectState) {
-            console.log('⚠️ No project state in getProjectChildren - returning debug info');
+            this.log('⚠️ No project state in getProjectChildren - returning debug info');
             return [
                 {
                     label: '❌ No project state available',
@@ -344,19 +359,45 @@ export class WorkflowTreeProvider implements vscode.TreeDataProvider<WorkflowTre
             items.push(epicItem);
         }
 
-        // Show plan epics action if no epics exist
+        // Show plan epics action if no epics exist or if we should have epics but parsing failed
         if (this.projectState.epics.length === 0) {
-            const planItem: WorkflowTreeItem = {
-                label: '➕ Plan new epics',
-                command: {
-                    command: 'claudeWorkflow.executeCommand',
-                    title: 'Plan Epics',
-                    arguments: [CommandRegistry.getCommand('planEpics')]
-                },
-                itemType: 'action',
-                contextValue: 'action'
-            };
-            items.push(planItem);
+            if (this.projectState.hasExecutedPlanEpics) {
+                // Plan Epics was executed but no epics found - show info + reparse option
+                const infoItem: WorkflowTreeItem = {
+                    label: '⚠️ Plan Epics executed but no epics found',
+                    iconPath: new vscode.ThemeIcon('warning'),
+                    collapsibleState: vscode.TreeItemCollapsibleState.None,
+                    itemType: 'info',
+                    contextValue: 'info',
+                    tooltip: 'Plan Epics was executed but EPICS.md might be empty or malformed'
+                };
+                items.push(infoItem);
+                
+                const refreshItem: WorkflowTreeItem = {
+                    label: '🔄 Refresh epic parsing',
+                    command: {
+                        command: 'claudeWorkflow.refresh',
+                        title: 'Refresh'
+                    },
+                    itemType: 'action',
+                    contextValue: 'action',
+                    tooltip: 'Force refresh epic parsing from EPICS.md'
+                };
+                items.push(refreshItem);
+            } else {
+                // No epics and Plan Epics not executed - show plan option
+                const planItem: WorkflowTreeItem = {
+                    label: '➕ Plan new epics',
+                    command: {
+                        command: 'claudeWorkflow.executeCommand',
+                        title: 'Plan Epics',
+                        arguments: [CommandRegistry.getCommand('planEpics')]
+                    },
+                    itemType: 'action',
+                    contextValue: 'action'
+                };
+                items.push(planItem);
+            }
         }
 
         return items;

@@ -36,8 +36,7 @@ export const App: React.FC = () => {
         );
     }
 
-    // Debug: Add a simple test to ensure React is working
-    console.log('App rendering, projectState:', projectState);
+    // Removed debug logging to reduce VSCode console clutter
 
     if (error) {
         return (

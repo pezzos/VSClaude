@@ -156,9 +156,9 @@ export class CommandExecutor {
             const commandTimeout = this.getTimeoutForCommand(command);
             const timeoutSeconds = Math.round(commandTimeout / 1000);
             
-            console.log(`🚀 Executing command: ${fullCommand}`);
-            console.log(`📁 Working directory: ${workspaceRoot}`);
-            console.log(`⏰ Timeout set to: ${timeoutSeconds} seconds`);
+            this.log(`🚀 Executing command: ${fullCommand}`);
+            this.log(`📁 Working directory: ${workspaceRoot}`);
+            this.log(`⏰ Timeout set to: ${timeoutSeconds} seconds`);
             
             // Show OutputChannel for long-running commands
             this.outputChannel.show(true);
@@ -196,13 +196,13 @@ export class CommandExecutor {
             let stdout = '';
             let stderr = '';
 
-            console.log(`🔢 Process PID: ${child.pid}`);
+            this.log(`🔢 Process PID: ${child.pid}`);
 
             // Capture stdout with stream-json parsing for real-time logs
             child.stdout?.on('data', (data: Buffer) => {
                 const output = data.toString();
                 stdout += output;
-                console.log(`📤 STDOUT: ${output}`);
+                this.log(`📤 STDOUT: ${output}`);
                 
                 // Parse stream-json format and display formatted logs
                 const formattedOutput = this.parseStreamJsonOutput(output);
@@ -217,7 +217,7 @@ export class CommandExecutor {
             child.stderr?.on('data', (data: Buffer) => {
                 const output = data.toString();
                 stderr += output;
-                console.log(`❌ STDERR: ${output}`);
+                this.log(`❌ STDERR: ${output}`, 'error');
                 
                 // Real-time logging to VSCode OutputChannel with error prefix
                 this.outputChannel.append(`[ERROR] ${output}`);
@@ -229,7 +229,7 @@ export class CommandExecutor {
 
             // Handle cancellation
             cancellationToken?.onCancellationRequested(() => {
-                console.log('⏹️ Command cancelled by user');
+                this.log('⏹️ Command cancelled by user', 'warn');
                 child.kill('SIGTERM');
                 
                 if (logId && this.outputLogProvider) {
@@ -245,7 +245,7 @@ export class CommandExecutor {
             // Handle process completion
             child.on('close', (code, signal) => {
                 const endTime = new Date();
-                console.log(`✅ Command finished with code: ${code}, signal: ${signal}`);
+                this.log(`✅ Command finished with code: ${code}, signal: ${signal}`);
                 
                 if (logId && this.outputLogProvider) {
                     this.outputLogProvider.updateCommand(logId, {
@@ -260,7 +260,7 @@ export class CommandExecutor {
                 if (code === 0) {
                     resolve(true);
                 } else {
-                    console.error(`❌ Command failed with exit code: ${code}`);
+                    this.log(`❌ Command failed with exit code: ${code}`, 'error');
                     resolve(false);
                 }
             });
@@ -268,7 +268,7 @@ export class CommandExecutor {
             // Handle process errors
             child.on('error', (error) => {
                 const endTime = new Date();
-                console.error(`❌ Command error: ${error.message}`);
+                this.log(`❌ Command error: ${error.message}`, 'error');
                 
                 if (logId && this.outputLogProvider) {
                     this.outputLogProvider.updateCommand(logId, {
@@ -283,7 +283,7 @@ export class CommandExecutor {
 
             // Set dynamic timeout based on command type (already calculated above)
             const timeoutHandle = setTimeout(() => {
-                console.log(`⏰ Command timeout after ${timeoutSeconds} seconds (${commandTimeout}ms) - killing PID ${child.pid}`);
+                this.log(`⏰ Command timeout after ${timeoutSeconds} seconds (${commandTimeout}ms) - killing PID ${child.pid}`, 'warn');
                 child.kill('SIGTERM');
                 
                 if (logId && this.outputLogProvider) {

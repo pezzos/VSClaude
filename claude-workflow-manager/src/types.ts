@@ -53,7 +53,7 @@ export interface Ticket {
 }
 
 export interface WorkflowTreeItem extends vscode.TreeItem {
-    itemType: 'project' | 'action' | 'epic' | 'story' | 'ticket' | 'collection';
+    itemType: 'project' | 'action' | 'epic' | 'story' | 'ticket' | 'collection' | 'info';
     data?: Epic | Story | Ticket;
     command?: vscode.Command;
 }
