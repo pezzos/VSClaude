@@ -1,0 +1,158 @@
+/* Browser Fallback Styles - Dark Theme Similar to VSCode Dark+ */
+/* These variables are used when VSCode theme variables are not available */
+
+:root {
+  /* Fallback colors for browser development (VSCode Dark+ theme) */
+  --fallback-foreground: #d4d4d4;
+  --fallback-background: #1e1e1e;
+  --fallback-editor-background: #1e1e1e;
+  --fallback-surface: #252526;
+  --fallback-border: #3e3e42;
+  --fallback-primary: #007acc;
+  --fallback-primary-hover: #005a9e;
+  --fallback-secondary: #2d2d30;
+  --fallback-success: #4ec9b0;
+  --fallback-warning: #dcdcaa;
+  --fallback-error: #f44747;
+  --fallback-info: #569cd6;
+  
+  /* Button colors */
+  --fallback-button-background: #0e639c;
+  --fallback-button-foreground: #ffffff;
+  --fallback-button-hover: #1177bb;
+  --fallback-button-secondary: #3c3c3c;
+  
+  /* Input colors */
+  --fallback-input-background: #3c3c3c;
+  --fallback-input-foreground: #cccccc;
+  --fallback-input-border: #3c3c3c;
+  
+  /* Status bar */
+  --fallback-statusbar-background: #007acc;
+  --fallback-statusbar-foreground: #ffffff;
+  
+  /* List and hover colors */
+  --fallback-list-hover: rgba(255, 255, 255, 0.1);
+  --fallback-toolbar-hover: rgba(255, 255, 255, 0.1);
+  
+  /* Badge colors */
+  --fallback-badge-background: #4d4d4d;
+  --fallback-badge-foreground: #ffffff;
+  
+  /* Description text */
+  --fallback-description: #cccccc;
+  
+  /* Terminal colors */
+  --fallback-terminal-background: #0c0c0c;
+  --fallback-terminal-foreground: #cccccc;
+  
+  /* Progress bar */
+  --fallback-progress-background: rgba(255, 255, 255, 0.2);
+  
+  /* Focus border */
+  --fallback-focus-border: #007fd4;
+  
+  /* Validation colors */
+  --fallback-validation-error-background: rgba(244, 71, 71, 0.1);
+  --fallback-validation-error-border: #f44747;
+  --fallback-validation-warning-background: rgba(220, 220, 170, 0.1);
+  --fallback-validation-warning-border: #dcdcaa;
+  
+  /* Editor widget */
+  --fallback-editor-widget-background: #252526;
+  --fallback-editor-widget-border: #454545;
+  
+  /* Code block */
+  --fallback-code-background: #1e1e1e;
+  
+  /* Scrollbar */
+  --fallback-scrollbar-background: rgba(121, 121, 121, 0.4);
+  --fallback-scrollbar-hover: rgba(100, 100, 100, 0.7);
+}
+
+/* Browser-specific fallback implementations */
+.browser-fallbacks {
+  /* Override VSCode variables with fallback values when in browser */
+  --vscode-foreground: var(--fallback-foreground);
+  --vscode-editor-background: var(--fallback-background);
+  --vscode-editorWidget-background: var(--fallback-surface);
+  --vscode-editorWidget-border: var(--fallback-border);
+  --vscode-button-background: var(--fallback-button-background);
+  --vscode-button-foreground: var(--fallback-button-foreground);
+  --vscode-button-hoverBackground: var(--fallback-button-hover);
+  --vscode-button-secondaryBackground: var(--fallback-button-secondary);
+  --vscode-input-background: var(--fallback-input-background);
+  --vscode-input-foreground: var(--fallback-input-foreground);
+  --vscode-input-border: var(--fallback-input-border);
+  --vscode-statusBar-background: var(--fallback-statusbar-background);
+  --vscode-statusBar-foreground: var(--fallback-statusbar-foreground);
+  --vscode-list-hoverBackground: var(--fallback-list-hover);
+  --vscode-toolbar-hoverBackground: var(--fallback-toolbar-hover);
+  --vscode-badge-background: var(--fallback-badge-background);
+  --vscode-badge-foreground: var(--fallback-badge-foreground);
+  --vscode-descriptionForeground: var(--fallback-description);
+  --vscode-terminal-background: var(--fallback-terminal-background);
+  --vscode-terminal-foreground: var(--fallback-terminal-foreground);
+  --vscode-progressBar-background: var(--fallback-progress-background);
+  --vscode-focusBorder: var(--fallback-focus-border);
+  --vscode-inputValidation-errorBackground: var(--fallback-validation-error-background);
+  --vscode-inputValidation-errorBorder: var(--fallback-validation-error-border);
+  --vscode-inputValidation-warningBackground: var(--fallback-validation-warning-background);
+  --vscode-inputValidation-warningBorder: var(--fallback-validation-warning-border);
+  --vscode-editorHoverWidget-background: var(--fallback-editor-widget-background);
+  --vscode-editorHoverWidget-border: var(--fallback-editor-widget-border);
+  --vscode-editorHoverWidget-foreground: var(--fallback-foreground);
+  --vscode-textCodeBlock-background: var(--fallback-code-background);
+  --vscode-scrollbarSlider-background: var(--fallback-scrollbar-background);
+  --vscode-scrollbarSlider-hoverBackground: var(--fallback-scrollbar-hover);
+  --vscode-editorGroupHeader-tabsBackground: var(--fallback-surface);
+  
+  /* Testing icon colors */
+  --vscode-testing-iconPassed: var(--fallback-success);
+  --vscode-testing-iconQueued: var(--fallback-warning);
+  --vscode-testing-iconFailed: var(--fallback-error);
+  --vscode-testing-iconSkipped: var(--fallback-info);
+  
+  /* Font family fallback */
+  --vscode-font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  --vscode-editor-font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  --vscode-font-size: 13px;
+}
+
+/* Apply dark theme styling to body when in browser */
+.browser-fallbacks body {
+  background-color: var(--fallback-background);
+  color: var(--fallback-foreground);
+}
+
+/* Additional browser-specific adjustments */
+.browser-fallbacks .app {
+  background-color: var(--fallback-background);
+  color: var(--fallback-foreground);
+}
+
+/* Ensure proper contrast for interactive elements */
+.browser-fallbacks button:not(:disabled):hover {
+  opacity: 0.9;
+}
+
+.browser-fallbacks .action-button-primary {
+  background: linear-gradient(135deg, var(--fallback-button-background) 0%, var(--fallback-button-hover) 100%);
+}
+
+.browser-fallbacks .action-button-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--fallback-button-hover) 0%, var(--fallback-button-background) 100%);
+}
+
+/* Override the dev mode indicator for better visibility */
+.browser-dev-indicator {
+  background: #ff6b35 !important;
+  color: white !important;
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  text-align: center;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(255, 107, 53, 0.3);
+}

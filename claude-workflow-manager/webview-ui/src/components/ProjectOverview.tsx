@@ -16,11 +16,11 @@ export const ProjectOverview: React.FC = () => {
     const api = useVSCodeAPI();
 
     const handleInitializeProject = () => {
-        api.executeCommand('/project:init', ['New Claude Workflow Project']);
+        api.executeCommand('/1-project:1-start:1-Init-Project');
     };
 
     const handleStartEpic = () => {
-        api.executeCommand('/project:agile:start', ['New Epic']);
+        api.executeCommand('/1-project:3-epics:1-Plan-Epics');
     };
 
     if (isLoading) {
@@ -238,7 +238,7 @@ export const ProjectOverview: React.FC = () => {
                             onClick={handleStartEpic}
                         >
                             <Play className="button-icon" />
-                            Start New Epic
+                            Plan Epics
                         </button>
                     )}
                     
@@ -246,19 +246,19 @@ export const ProjectOverview: React.FC = () => {
                         <>
                             <button 
                                 className="action-button"
-                                onClick={() => api.executeCommand('/project:agile:design')}
+                                onClick={() => api.executeCommand('/2-epic:1-start:1-Plan-stories')}
                             >
-                                Design Architecture
+                                Plan Stories
                             </button>
                             <button 
                                 className="action-button"
-                                onClick={() => api.executeCommand('/project:agile:plan')}
+                                onClick={() => api.executeCommand('/3-story:1-start:1-Plan-tickets')}
                             >
-                                Plan Implementation
+                                Plan Tickets
                             </button>
                             <button 
                                 className="action-button"
-                                onClick={() => api.executeCommand('/project:agile:iterate')}
+                                onClick={() => api.executeCommand('/4-ticket:2-execute:1-Plan-Ticket')}
                             >
                                 Start Development
                             </button>

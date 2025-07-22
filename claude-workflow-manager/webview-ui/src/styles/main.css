@@ -2295,13 +2295,6 @@ select:focus-visible {
   padding: var(--spacing-lg);
 }
 
-.action-block {
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  padding: var(--spacing-lg);
-}
-
 .block-title {
   margin: 0 0 var(--spacing-md) 0;
   font-size: 14px;
@@ -2315,7 +2308,7 @@ select:focus-visible {
 .action-sequence {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-xs);
   flex-wrap: wrap;
 }
 
@@ -2323,16 +2316,7 @@ select:focus-visible {
   flex: 0 0 auto;
   min-width: 140px;
   font-size: 12px;
-  padding: var(--spacing-sm) var(--spacing-md);
-}
-
-.sequence-arrow {
-  display: flex;
-  align-items: center;
-  font-size: 16px;
-  color: var(--vscode-descriptionForeground);
-  margin: 0 var(--spacing-xs);
-  user-select: none;
+  padding: var(--spacing-xs) var(--spacing-xs);
 }
 
 .action-button-secondary.disabled {
@@ -2421,11 +2405,6 @@ select:focus-visible {
   .action-sequence {
     flex-direction: column;
     align-items: stretch;
-  }
-  
-  .sequence-arrow {
-    transform: rotate(90deg);
-    margin: var(--spacing-xs) 0;
   }
   
   .action-sequence .action-button-secondary {

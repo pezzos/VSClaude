@@ -3,8 +3,10 @@ import { ProjectOverview } from './components/ProjectOverview';
 import { ActionHeader } from './components/ActionHeader';
 import { ProjectCard } from './components/ProjectCard';
 import { useVSCodeTheme } from './hooks/useVSCodeAPI';
-import { useProjectData } from './hooks/useProjectState';
+import { useProjectData } from './hooks/useProjectDataWithFakes';
+import { isBrowserDev } from './utils/environment';
 import './styles/main.css';
+import './styles/browser-fallbacks.css';
 
 export const App: React.FC = () => {
     const [isLogCardExpanded, setIsLogCardExpanded] = useState(false);
@@ -49,9 +51,14 @@ export const App: React.FC = () => {
     }
 
     return (
-        <div className="app dashboard">
+        <div className={`app dashboard ${isBrowserDev() ? 'browser-fallbacks' : ''}`}>
             {/* Simple debug header */}
             <h2>🚀 Claude Workflow Manager</h2>
+            {isBrowserDev() && (
+                <div className="browser-dev-indicator">
+                    🔧 BROWSER DEV MODE - Using fake data
+                </div>
+            )}
 
             {/* Action Header */}
             <ActionHeader

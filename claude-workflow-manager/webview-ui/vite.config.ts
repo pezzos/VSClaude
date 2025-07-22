@@ -20,7 +20,7 @@ export default defineConfig({
   // Configure for VSCode webview context
   base: '',
   server: {
-    port: 3000,
+    port: 3080,
     host: 'localhost',
     cors: true
   },
